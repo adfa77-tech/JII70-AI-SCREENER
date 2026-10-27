@@ -38,7 +38,7 @@ def send_telegram_alert(message):
         except:
             pass
 
-# 3. DAFTAR SAHAM JII70 KUSTOM SESUAI STRUKTUR DATA USER
+# 3. DAFTAR 70 SAHAM JII70 YANG BENAR SESUAI INPUT USER
 JII70_TICKERS = [
     "AADI.JK", "ACES.JK", "ADMR.JK", "ADRO.JK", "AKRA.JK", "ANTM.JK", "ARCI.JK", "AVIA.JK", "BKSL.JK", "BRIS.JK",
     "BRMS.JK", "BSDE.JK", "BTPS.JK", "BUMI.JK", "CMRY.JK", "CPIN.JK", "CTRA.JK", "DEWA.JK", "DKFT.JK", "DSNG.JK",
@@ -95,7 +95,6 @@ def fetch_market_data():
             stock = yf.Ticker(t)
             hist = stock.history(period="3mo")
             
-            # Jika data historis tidak lengkap dari yfinance, hitung berbasis data fallback langsung
             if hist.empty or len(hist) < 20 or pd.isna(hist['Close'].iloc[-1]):
                 raise ValueError("Data Kosong")
                 
@@ -161,9 +160,9 @@ if st.button("Jalankan Screener & Kirim Alert"):
         """
 
         try:
-            # Menggunakan model produksi terupdate yang aktif di Groq saat ini
+            # Menggunakan model Llama resmi yang dijamin aktif
             response_q = client.chat.completions.create(
-                model="openai/gpt-oss-120b",
+                model="llama3-70b-8192",
                 messages=[{"role": "user", "content": prompt_query}],
                 temperature=0.0
             )
@@ -196,7 +195,7 @@ if st.button("Jalankan Screener & Kirim Alert"):
 
                 with st.spinner("Groq AI sedang menyusun keputusan trading..."):
                     response_a = client.chat.completions.create(
-                        model="openai/gpt-oss-120b",
+                        model="llama3-70b-8192",
                         messages=[{"role": "user", "content": prompt_analysis}],
                         temperature=0.1
                     )
@@ -218,5 +217,3 @@ if st.button("Jalankan Screener & Kirim Alert"):
                         st.write("---")
 
                         if item["rekomendasi"] == "BELI":
-                            msg_telegram = (
-                                f"🚨 *JII70 GROQ BUY ALERT* 🚨\n\n"
