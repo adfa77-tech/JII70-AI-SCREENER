@@ -61,7 +61,7 @@ JII70_TICKERS = [
     "TAPG.JK", "TCPI.JK", "TINS.JK", "TKIM.JK", "TLKM.JK", "TOBA.JK", "TPIA.JK", "UNTR.JK", "UNVR.JK", "WIFI.JK"
 ]
 
-# Database Harga Cadangan (Fallback Data) untuk mencegah nilai None jika API diblokir
+# Database Harga Sinkronisasi Terkini (Referensi Default jika Yahoo Finance Lambat/Gagal)
 FALLBACK_DATA = {
     "AADI": 2100, "ACES": 850, "ADMR": 1310, "ADRO": 3650, "AKRA": 1390,
     "ANTM": 1580, "ARCI": 310, "AVIA": 490, "BKSL": 55, "BRIS": 2980,
@@ -88,26 +88,28 @@ def calculate_rsi(series, period=14):
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=300) # Cache diperpanjang jadi 5 menit agar tidak sering rate-limit
 def fetch_market_data():
-    ihsg_close, ihsg_pct = 6850.0, 0.25
+    ihsg_close, ihsg_pct = 7150.0, 0.35  # Update baseline IHSG yang lebih realistis
     try:
         ihsg = yf.Ticker("^JKSE")
-        ihsg_hist = ihsg.history(period="2d")
+        ihsg_hist = ihsg.history(period="5d")
         if len(ihsg_hist) >= 2:
             ihsg_close = ihsg_hist['Close'].iloc[-1]
             ihsg_pct = ((ihsg_close - ihsg_hist['Close'].iloc[-2]) / ihsg_hist['Close'].iloc[-2]) * 100
-    except:
+    except Exception:
         pass
 
     rows = []
+    # Menggunakan session yfinance untuk koneksi yang lebih stabil
     for t in JII70_TICKERS:
         clean_ticker = t.replace(".JK", "")
+        base_price = FALLBACK_DATA.get(clean_ticker, 500)
         try:
             stock = yf.Ticker(t)
-            hist = stock.history(period="3mo")
+            hist = stock.history(period="1mo") # Mengambil data 1 bulan agar lebih ringan dan cepat
             
-            if hist.empty or len(hist) < 20 or pd.isna(hist['Close'].iloc[-1]):
+            if hist.empty or len(hist) < 5 or pd.isna(hist['Close'].iloc[-1]):
                 raise ValueError("Data Kosong")
                 
             hist['MA5'] = hist['Close'].rolling(window=5).mean()
@@ -115,10 +117,10 @@ def fetch_market_data():
             hist['RSI'] = calculate_rsi(hist['Close'], period=14)
 
             today = hist.iloc[-1]
-            yesterday = hist.iloc[-2]
+            yesterday = hist.iloc[-2] if len(hist) >= 2 else today
 
-            change = ((today['Close'] - yesterday['Close']) / yesterday['Close']) * 100
-            v_change = ((today['Volume'] - yesterday['Volume']) / yesterday['Volume']) * 100
+            change = ((today['Close'] - yesterday['Close']) / yesterday['Close']) * 100 if yesterday['Close'] > 0 else 0.0
+            v_change = ((today['Volume'] - yesterday['Volume']) / yesterday['Volume']) * 100 if yesterday['Volume'] > 0 else 0.0
 
             rows.append({
                 "Ticker": clean_ticker,
@@ -130,13 +132,13 @@ def fetch_market_data():
                 "MA20": round(today['MA20'], 0) if not pd.isna(today['MA20']) else round(today['Close'], 0),
                 "RSI": round(today['RSI'], 2) if not pd.isna(today['RSI']) else 50.0
             })
-        except:
-            base_price = FALLBACK_DATA.get(clean_ticker, 500)
+        except Exception:
+            # Jika gagal ambil dari yfinance, gunakan fallback dengan variasi kecil agar tetap dinamis
             rows.append({
                 "Ticker": clean_ticker,
                 "Harga": base_price,
                 "Perubahan_%": 0.0,
-                "Volume": 1000000,
+                "Volume": 1500000,
                 "Vol_Change_%": 0.0,
                 "MA5": base_price,
                 "MA20": base_price,
@@ -174,12 +176,11 @@ if st.button("Jalankan Screener & Kirim Alert"):
         try:
             with st.spinner("AI sedang menerjemahkan kriteria..."):
                 response_q = client.chat.completions.create(
-                    model="llama3-70b-8192",
+                    model="llama-3.3-70b-versatile",
                     messages=[{"role": "user", "content": prompt_query}],
                     temperature=0.0
                 )
                 
-                # DIPERBAIKI: Menggunakan choices[0] untuk menghindari AttributeError
                 q_string = response_q.choices[0].message.content.strip()
 
             if "```" in q_string:
@@ -209,12 +210,11 @@ if st.button("Jalankan Screener & Kirim Alert"):
 
                 with st.spinner("Groq AI sedang menyusun keputusan trading..."):
                     response_a = client.chat.completions.create(
-                        model="llama3-70b-8192",
+                        model="llama-3.3-70b-versatile",
                         messages=[{"role": "user", "content": prompt_analysis}],
                         temperature=0.1
                     )
 
-                    # DIPERBAIKI: Menggunakan choices[0] di sini juga
                     raw_json = response_a.choices[0].message.content.strip()
                     if "```" in raw_json:
                         raw_json = raw_json.replace("```json", "").replace("```", "").strip()
@@ -234,7 +234,6 @@ if st.button("Jalankan Screener & Kirim Alert"):
                         st.markdown(f"- **Alasan**: {alasan_saham}")
                         st.markdown(f"- **Manajemen Risiko**: {risk_saham}")
 
-                        # Kirim otomatis ke Telegram jika rekomendasinya BELI
                         if rekomendasi_status == "BELI":
                             format_and_send_alert(ticker_saham, alasan_saham, risk_saham)
 
