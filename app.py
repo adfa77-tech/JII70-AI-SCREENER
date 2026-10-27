@@ -3,22 +3,21 @@ import requests
 import pandas as pd
 import streamlit as st
 import yfinance as yf
-from google import genai
-from google.genai import types
+from groq import Groq
 
 # 1. Konfigurasi Tampilan Halaman Streamlit
 st.set_page_config(
-    page_title="JII70 Gemini AI Syariah Screener",
+    page_title="JII70 Groq AI Syariah Screener",
     page_icon="🕌",
     layout="wide",
 )
 
-st.title("🕌 JII70 Gemini AI Syariah Screener + Telegram Alert")
-st.subheader("Screener saham syariah gratis berbasis Google Gemini AI")
+st.title("🕌 JII70 Groq AI Syariah Screener + Telegram Alert")
+st.subheader("Screener saham syariah gratis berbasis Groq Cloud AI")
 
-# 2. Sidebar Konfigurasi API Gemini & Telegram
+# 2. Sidebar Konfigurasi API Groq & Telegram
 st.sidebar.title("🔐 Konfigurasi Kredensial")
-gemini_api_key = st.sidebar.text_input("1. Gemini API Key:", type="password")
+groq_api_key = st.sidebar.text_input("1. Groq API Key (gsk_...):", type="password")
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("📢 Integrasi Telegram")
@@ -43,23 +42,10 @@ def send_telegram_alert(message):
 
 # 3. Data Emiten JII70 & Fungsi Indikator
 JII70_TICKERS = [
-    "ADRO.JK",
-    "AKRA.JK",
-    "ANTM.JK",
-    "ASII.JK",
-    "BRIS.JK",
-    "BRPT.JK",
-    "CPIN.JK",
-    "EXCL.JK",
-    "INDF.JK",
-    "ITMG.JK",
-    "KLBF.JK",
-    "MEDC.JK",
-    "PGAS.JK",
-    "PTBA.JK",
-    "SMGR.JK",
-    "TLKM.JK",
-    "UNVR.JK",
+    "ADRO.JK", "AKRA.JK", "ANTM.JK", "ASII.JK", "BRIS.JK",
+    "BRPT.JK", "CPIN.JK", "EXCL.JK", "INDF.JK", "ITMG.JK",
+    "KLBF.JK", "MEDC.JK", "PGAS.JK", "PTBA.JK", "SMGR.JK",
+    "TLKM.JK", "UNVR.JK",
 ]
 
 
@@ -79,10 +65,7 @@ def fetch_market_data():
     ihsg_hist = ihsg.history(period="2d")
     if len(ihsg_hist) >= 2:
       ihsg_close = ihsg_hist["Close"].iloc[-1]
-      ihsg_pct = (
-          (ihsg_close - ihsg_hist["Close"].iloc[-2])
-          / ihsg_hist["Close"].iloc[-2]
-      ) * 100
+      ihsg_pct = ((ihsg_close - ihsg_hist["Close"].iloc[-2]) / ihsg_hist["Close"].iloc[-2]) * 100
   except:
     pass
 
@@ -100,9 +83,7 @@ def fetch_market_data():
         yesterday = hist.iloc[-2]
 
         change = ((today["Close"] - yesterday["Close"]) / yesterday["Close"]) * 100
-        v_change = (
-            (today["Volume"] - yesterday["Volume"]) / yesterday["Volume"]
-        ) * 100
+        v_change = ((today["Volume"] - yesterday["Volume"]) / yesterday["Volume"]) * 100
 
         rows.append({
             "Ticker": t.replace(".JK", ""),
@@ -131,38 +112,36 @@ st.write("### 📋 Monitor Pasar Saham Syariah JII70 Terbaru")
 st.dataframe(df_jii70, use_container_width=True, hide_index=True)
 st.write("---")
 
-st.write("### 🤖 Jalankan Perintah Screening AI Gemini")
+st.write("### 🤖 Jalankan Perintah Screening AI Groq")
 user_query = st.text_input(
     "Masukkan Kriteria:",
-    value="Cari saham yang harganya diatas MA5 dan RSI dibawah 60",
+    value="Cari saham yang harganya diatas MA5 and RSI dibawah 60",
 )
 
 if st.button("Jalankan Screener & Kirim Alert"):
-  if not gemini_api_key:
-    st.error("Silakan isi Gemini API Key terlebih dahulu di sidebar.")
+  if not groq_api_key:
+    st.error("Silakan isi Groq API Key terlebih dahulu di sidebar.")
   else:
-    # Menginisialisasi Client Google GenAI yang baru
-    client = genai.Client(api_key=gemini_api_key)
+    # Menginisialisasi Client Groq
+    client = Groq(api_key=groq_api_key)
 
     prompt_query = f"""
         Ubah instruksi ini menjadi parameter query pandas berdasarkan kolom: Ticker, Harga, Perubahan_%, Volume, Vol_Change_%, MA5, MA20, RSI.
         User request: "{user_query}"
-        Keluarkan HANYA string query. Contoh output: RSI < 40 and Perubahan_% > 1
+        Keluarkan HANYA string query. Jangan berikan penutup markdown atau teks pembuka. Contoh output: RSI < 40 and Perubahan_% > 1
         """
 
     try:
-      # Menggunakan model tercepat gemini-2.5-flash
-      response_q = client.models.generate_content(
-          model="gemini-2.5-flash",
-          contents=prompt_query,
+      # Menggunakan model Llama terbaru yang super cepat dan gratis
+      response_q = client.chat.completions.create(
+          model="llama-3.3-70b-specdec",
+          messages=[{"role": "user", "content": prompt_query}],
+          temperature=0.0,
       )
-      q_string = response_q.text.strip()
+      q_string = response_q.choices[0].message.content.strip()
 
-      # Bersihkan tag codeblock jika didapatkan dari LLM
       if q_string.startswith("```"):
-        q_string = (
-            q_string.replace("```python", "").replace("```", "").strip()
-        )
+        q_string = q_string.replace("```python", "").replace("```", "").strip()
 
       df_filtered = df_jii70.query(q_string)
 
@@ -186,28 +165,23 @@ if st.button("Jalankan Screener & Kirim Alert"):
             ]
             """
 
-        with st.spinner("Gemini AI sedang menyusun keputusan trading..."):
-          response_a = client.models.generate_content(
-              model="gemini-2.5-flash",
-              contents=prompt_analysis,
+        with st.spinner("Groq AI sedang menyusun keputusan trading..."):
+          response_a = client.chat.completions.create(
+              model="llama-3.3-70b-specdec",
+              messages=[{"role": "user", "content": prompt_analysis}],
+              temperature=0.1,
           )
 
-          raw_json = response_a.text.strip()
+          raw_json = response_a.choices[0].message.content.strip()
           if raw_json.startswith("```"):
-            raw_json = (
-                raw_json.replace("```json", "").replace("```", "").strip()
-            )
+            raw_json = raw_json.replace("```json", "").replace("```", "").strip()
 
           rekomendasi_list = json.loads(raw_json)
 
           st.write("### ⚡ Hasil Analisis & Eksekusi Alert:")
 
           for item in rekomendasi_list:
-            color = (
-                "💚"
-                if item["rekomendasi"] == "BELI"
-                else ("❤️" if item["rekomendasi"] == "JUAL" else "💛")
-            )
+            color = "💚" if item["rekomendasi"] == "BELI" else ("❤️" if item["rekomendasi"] == "JUAL" else "💛")
 
             st.markdown(f"### {color} {item['ticker']} — **{item['rekomendasi']}**")
             st.markdown(f"- **Alasan**: {item['alasan']}")
@@ -216,12 +190,12 @@ if st.button("Jalankan Screener & Kirim Alert"):
 
             if item["rekomendasi"] == "BELI":
               msg_telegram = (
-                  f"🚨 *JII70 GEMINI BUY ALERT* 🚨\n\n"
+                  f"🚨 *JII70 GROQ BUY ALERT* 🚨\n\n"
                   f"🔹 *Saham:* #{item['ticker']}\n"
                   f"🟢 *Rekomendasi:* BELI (BUY)\n"
                   f"📈 *Alasan:* {item['alasan']}\n"
                   f"🛡️ *Manajemen Risiko:* {item['risk']}\n\n"
-                  f"⚡ _Sent from Gemini AI Screener Dashboard_"
+                  f"⚡ _Sent from Groq AI Screener Dashboard_"
               )
               send_telegram_alert(msg_telegram)
               st.toast(f"🔔 Sinyal BELI {item['ticker']} terkirim ke Telegram!")
