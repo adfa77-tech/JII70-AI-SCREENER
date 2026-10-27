@@ -27,7 +27,7 @@ tele_chat_id = st.sidebar.text_input("3. Telegram Chat ID:")
 # Fungsi mengirim alert ke Telegram
 def send_telegram_alert(message):
     if tele_token and tele_chat_id:
-        url = f"https://telegram.org{tele_token}/sendMessage"
+        url = f"https://api.telegram.org/bot{tele_token}/sendMessage"
         payload = {
             "chat_id": tele_chat_id,
             "text": message,
@@ -37,6 +37,18 @@ def send_telegram_alert(message):
             requests.post(url, json=payload)
         except:
             pass
+
+# Fungsi khusus format pesan Telegram untuk menghindari error indentasi f-string
+def format_and_send_alert(ticker, alasan, risk):
+    msg = (
+        "🚨 *JII70 GROQ BUY ALERT* 🚨\n\n"
+        f"🔹 *Saham:* #{ticker}\n"
+        "🟢 *Rekomendasi:* BELI (BUY)\n"
+        f"📈 *Alasan:* {alasan}\n"
+        f"🛡️ *Manajemen Risiko:* {risk}\n\n"
+        "⚡ _Sent from Groq AI Screener Dashboard_"
+    )
+    send_telegram_alert(msg)
 
 # 3. DAFTAR LENGKAP 70 KODE SAHAM SYARIAH JII70 YANG BENAR
 JII70_TICKERS = [
@@ -153,11 +165,11 @@ if st.button("Jalankan Screener & Kirim Alert"):
     else:
         client = Groq(api_key=groq_api_key)
 
-        prompt_query = f"""
+        prompt_query = """
         Ubah instruksi ini menjadi parameter query pandas berdasarkan kolom: Ticker, Harga, Perubahan_%, Volume, Vol_Change_%, MA5, MA20, RSI.
-        User request: "{user_query}"
+        User request: "{}"
         Keluarkan HANYA string query. Jangan berikan penutup markdown atau teks pembuka. Contoh output: RSI < 40 and Perubahan_% > 1
-        """
+        """.format(user_query)
 
         try:
             response_q = client.chat.completions.create(
@@ -211,7 +223,3 @@ if st.button("Jalankan Screener & Kirim Alert"):
                         color = "💚" if item["rekomendasi"] == "BELI" else ("❤️" if item["rekomendasi"] == "JUAL" else "💛")
                         st.markdown(f"### {color} {item['ticker']} — **{item['rekomendasi']}**")
                         st.markdown(f"- **Alasan**: {item['alasan']}")
-                        st.markdown(f"- **Manajemen Risiko**: {item['risk']}")
-                        st.write("---")
-                        if item["rekomendasi"] == "BELI":
-                            msg_telegram = f"🚨 *JII70 GROQ BUY ALERT* 🚨\n\n🔹 *Saham:* #{item['ticker']}\n🟢 *Rekomendasi:* BELI (BUY)\n📈 *Alasan:* {item['alasan']}\n🛡️ *Manajemen Risiko:* {item['risk']}\n\n⚡ _Sent from Groq AI Screener Dashboard_"
