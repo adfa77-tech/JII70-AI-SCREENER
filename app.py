@@ -213,6 +213,5 @@ if st.button("Jalankan Screener & Kirim Alert"):
                         st.markdown(f"- **Alasan**: {item['alasan']}")
                         st.markdown(f"- **Manajemen Risiko**: {item['risk']}")
                         st.write("---")
-                        
                         if item["rekomendasi"] == "BELI":
                             msg_telegram = f"🚨 *JII70 GROQ BUY ALERT* 🚨\n\n🔹 *Saham:* #{item['ticker']}\n🟢 *Rekomendasi:* BELI (BUY)\n📈 *Alasan:* {item['alasan']}\n🛡️ *Manajemen Risiko:* {item['risk']}\n\n⚡ _Sent from Groq AI Screener Dashboard_"
