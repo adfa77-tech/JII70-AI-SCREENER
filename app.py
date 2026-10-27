@@ -40,12 +40,15 @@ def send_telegram_alert(message):
       pass
 
 
-# 3. Data Emiten JII70 & Fungsi Indikator
+# 3. DAFTAR LENGKAP 70 KODE SAHAM SYARIAH JII70 YANG BENAR
 JII70_TICKERS = [
-    "ADRO.JK", "AKRA.JK", "ANTM.JK", "ASII.JK", "BRIS.JK",
-    "BRPT.JK", "CPIN.JK", "EXCL.JK", "INDF.JK", "ITMG.JK",
-    "KLBF.JK", "MEDC.JK", "PGAS.JK", "PTBA.JK", "SMGR.JK",
-    "TLKM.JK", "UNVR.JK",
+    "AADI.JK", "ACES.JK", "ADMR.JK", "ADRO.JK", "AKRA.JK", "ANTM.JK", "ARCI.JK", "AVIA.JK", "BKSL.JK", "BRIS.JK",
+    "BRMS.JK", "BSDE.JK", "BTPS.JK", "BUMI.JK", "CMRY.JK", "CPIN.JK", "CTRA.JK", "DEWA.JK", "DKFT.JK", "DSNG.JK",
+    "ELSA.JK", "ENRG.JK", "ERAA.JK", "ESSA.JK", "EXCL.JK", "HEAL.JK", "HRTA.JK", "HRUM.JK", "ICBP.JK", "IMPC.JK",
+    "INDF.JK", "INDY.JK", "INKP.JK", "INTP.JK", "ISAT.JK", "ITMG.JK", "JPFA.JK", "JSMR.JK", "KIJA.JK", "KLBF.JK",
+    "KPIG.JK", "LSIP.JK", "MAPA.JK", "MAPI.JK", "MARK.JK", "MBMA.JK", "MDKA.JK", "MEDC.JK", "MIKA.JK", "MTEL.JK",
+    "MYOR.JK", "PGAS.JK", "PTBA.JK", "RAJA.JK", "RATU.JK", "SIDO.JK", "SMGR.JK", "SMRA.JK", "SRTG.JK", "SSIA.JK",
+    "TAPG.JK", "TCPI.JK", "TINS.JK", "TKIM.JK", "TLKM.JK", "TOBA.JK", "TPIA.JK", "UNTR.JK", "UNVR.JK", "WIFI.JK"
 ]
 
 
@@ -108,7 +111,7 @@ st.metric(
     delta=f"{ihsg_chg:.2f}%",
 )
 
-st.write("### 📋 Monitor Pasar Saham Syariah JII70 Terbaru")
+st.write(f"### 📋 Monitor Pasar Saham Syariah JII70 Terbaru ({len(df_jii70)} Emiten Aktif)")
 st.dataframe(df_jii70, use_container_width=True, hide_index=True)
 st.write("---")
 
@@ -122,7 +125,6 @@ if st.button("Jalankan Screener & Kirim Alert"):
   if not groq_api_key:
     st.error("Silakan isi Groq API Key terlebih dahulu di sidebar.")
   else:
-    # Menginisialisasi Client Groq
     client = Groq(api_key=groq_api_key)
 
     prompt_query = f"""
@@ -132,13 +134,12 @@ if st.button("Jalankan Screener & Kirim Alert"):
         """
 
     try:
-      # Menggunakan model Llama terbaru yang super cepat dan gratis
       response_q = client.chat.completions.create(
-          model="llama-3.3-70b-specdec",
+          model="llama-3.3-70b-versatile",
           messages=[{"role": "user", "content": prompt_query}],
           temperature=0.0,
       )
-      q_string = response_q.choices[0].message.content.strip()
+      q_string = response_q.choices.message.content.strip()
 
       if q_string.startswith("```"):
         q_string = q_string.replace("```python", "").replace("```", "").strip()
@@ -167,12 +168,12 @@ if st.button("Jalankan Screener & Kirim Alert"):
 
         with st.spinner("Groq AI sedang menyusun keputusan trading..."):
           response_a = client.chat.completions.create(
-              model="llama-3.3-70b-specdec",
+              model="llama-3.3-70b-versatile",
               messages=[{"role": "user", "content": prompt_analysis}],
               temperature=0.1,
           )
 
-          raw_json = response_a.choices[0].message.content.strip()
+          raw_json = response_a.choices.message.content.strip()
           if raw_json.startswith("```"):
             raw_json = raw_json.replace("```json", "").replace("```", "").strip()
 
