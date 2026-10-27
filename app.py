@@ -34,9 +34,9 @@ def send_telegram_alert(message):
             "parse_mode": "Markdown"
         }
         try:
-            requests.post(url, json=payload)
-        except:
-            pass
+            requests.post(url, json=payload, timeout=5)
+        except Exception as e:
+            st.sidebar.error(f"Gagal kirim Telegram: {e}")
 
 # Fungsi khusus format pesan Telegram untuk menghindari error indentasi f-string
 def format_and_send_alert(ticker, alasan, risk):
@@ -165,21 +165,24 @@ if st.button("Jalankan Screener & Kirim Alert"):
     else:
         client = Groq(api_key=groq_api_key)
 
-        prompt_query = """
+        prompt_query = f"""
         Ubah instruksi ini menjadi parameter query pandas berdasarkan kolom: Ticker, Harga, Perubahan_%, Volume, Vol_Change_%, MA5, MA20, RSI.
-        User request: "{}"
+        User request: "{user_query}"
         Keluarkan HANYA string query. Jangan berikan penutup markdown atau teks pembuka. Contoh output: RSI < 40 and Perubahan_% > 1
-        """.format(user_query)
+        """
 
         try:
-            response_q = client.chat.completions.create(
-                model="llama3-70b-8192",
-                messages=[{"role": "user", "content": prompt_query}],
-                temperature=0.0
-            )
-            q_string = response_q.choices.message.content.strip()
+            with st.spinner("AI sedang menerjemahkan kriteria..."):
+                response_q = client.chat.completions.create(
+                    model="llama3-70b-8192",
+                    messages=[{"role": "user", "content": prompt_query}],
+                    temperature=0.0
+                )
+                
+                # DIPERBAIKI: Menggunakan choices[0] untuk menghindari AttributeError
+                q_string = response_q.choices[0].message.content.strip()
 
-            if q_string.startswith("```"):
+            if "```" in q_string:
                 q_string = q_string.replace("```python", "").replace("```", "").strip()
 
             df_filtered = df_jii70.query(q_string)
@@ -211,8 +214,9 @@ if st.button("Jalankan Screener & Kirim Alert"):
                         temperature=0.1
                     )
 
-                    raw_json = response_a.choices.message.content.strip()
-                    if raw_json.startswith("```"):
+                    # DIPERBAIKI: Menggunakan choices[0] di sini juga
+                    raw_json = response_a.choices[0].message.content.strip()
+                    if "```" in raw_json:
                         raw_json = raw_json.replace("```json", "").replace("```", "").strip()
 
                     rekomendasi_list = json.loads(raw_json)
@@ -220,6 +224,21 @@ if st.button("Jalankan Screener & Kirim Alert"):
                     st.write("### ⚡ Hasil Analisis & Eksekusi Alert:")
 
                     for item in rekomendasi_list:
-                        color = "💚" if item["rekomendasi"] == "BELI" else ("❤️" if item["rekomendasi"] == "JUAL" else "💛")
-                        st.markdown(f"### {color} {item['ticker']} — **{item['rekomendasi']}**")
-                        st.markdown(f"- **Alasan**: {item['alasan']}")
+                        rekomendasi_status = item.get("rekomendasi", "HOLD")
+                        ticker_saham = item.get("ticker", "")
+                        alasan_saham = item.get("alasan", "-")
+                        risk_saham = item.get("risk", "-")
+
+                        color = "💚" if rekomendasi_status == "BELI" else ("❤️" if rekomendasi_status == "JUAL" else "💛")
+                        st.markdown(f"### {color} {ticker_saham} — **{rekomendasi_status}**")
+                        st.markdown(f"- **Alasan**: {alasan_saham}")
+                        st.markdown(f"- **Manajemen Risiko**: {risk_saham}")
+
+                        # Kirim otomatis ke Telegram jika rekomendasinya BELI
+                        if rekomendasi_status == "BELI":
+                            format_and_send_alert(ticker_saham, alasan_saham, risk_saham)
+
+                    st.success("🎉 Proses analisis selesai dan alert Telegram berhasil diproses!")
+
+        except Exception as e:
+            st.error(f"Terjadi kesalahan saat memproses query atau AI: {e}")
