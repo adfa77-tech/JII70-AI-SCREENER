@@ -160,7 +160,7 @@ if st.button("Jalankan Screener & Kirim Alert"):
         """
 
         try:
-            # Menggunakan model Llama resmi yang dijamin aktif
+            # Menggunakan model Llama resmi dari Groq
             response_q = client.chat.completions.create(
                 model="llama3-70b-8192",
                 messages=[{"role": "user", "content": prompt_query}],
