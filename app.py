@@ -1,22 +1,24 @@
+import json
 import requests
-import openai
 import pandas as pd
 import streamlit as st
 import yfinance as yf
+from google import genai
+from google.genai import types
 
 # 1. Konfigurasi Tampilan Halaman Streamlit
 st.set_page_config(
-    page_title="JII70 AI Screener + Telegram Alert",
+    page_title="JII70 Gemini AI Syariah Screener",
     page_icon="🕌",
     layout="wide",
 )
 
-st.title("🕌 JII70 AI Syariah Screener + Telegram Alert")
-st.subheader("Screener saham syariah otomatis dengan notifikasi real-time")
+st.title("🕌 JII70 Gemini AI Syariah Screener + Telegram Alert")
+st.subheader("Screener saham syariah gratis berbasis Google Gemini AI")
 
-# 2. Sidebar Konfigurasi API & Telegram
+# 2. Sidebar Konfigurasi API Gemini & Telegram
 st.sidebar.title("🔐 Konfigurasi Kredensial")
-api_key = st.sidebar.text_input("1. OpenAI API Key:", type="password")
+gemini_api_key = st.sidebar.text_input("1. Gemini API Key:", type="password")
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("📢 Integrasi Telegram")
@@ -24,7 +26,7 @@ tele_token = st.sidebar.text_input("2. Telegram Bot Token:", type="password")
 tele_chat_id = st.sidebar.text_input("3. Telegram Chat ID:")
 
 
-# Fungsi untuk mengirim pesan ke Telegram
+# Fungsi mengirim alert ke Telegram
 def send_telegram_alert(message):
   if tele_token and tele_chat_id:
     url = f"https://telegram.org{tele_token}/sendMessage"
@@ -35,11 +37,11 @@ def send_telegram_alert(message):
     }
     try:
       requests.post(url, json=payload)
-    except Exception as e:
-      st.sidebar.error(f"Gagal mengirim Telegram: {e}")
+    except:
+      pass
 
 
-# 3. Data Konstituen JII70 & Fungsi Indikator
+# 3. Data Emiten JII70 & Fungsi Indikator
 JII70_TICKERS = [
     "ADRO.JK",
     "AKRA.JK",
@@ -117,10 +119,8 @@ def fetch_market_data():
   return ihsg_close, ihsg_pct, pd.DataFrame(rows)
 
 
-# Load Data Pasar
 ihsg_val, ihsg_chg, df_jii70 = fetch_market_data()
 
-# Tampilan Ringkasan IHSG Realtime
 st.metric(
     label="📊 Indeks Harga Saham Gabungan (IHSG)",
     value=f"{ihsg_val:,.2f}",
@@ -131,20 +131,19 @@ st.write("### 📋 Monitor Pasar Saham Syariah JII70 Terbaru")
 st.dataframe(df_jii70, use_container_width=True, hide_index=True)
 st.write("---")
 
-# 4. Input Kriteria AI Screener
-st.write("### 🤖 Jalankan Perintah Screening AI")
+st.write("### 🤖 Jalankan Perintah Screening AI Gemini")
 user_query = st.text_input(
     "Masukkan Kriteria:",
     value="Cari saham yang harganya diatas MA5 dan RSI dibawah 60",
 )
 
 if st.button("Jalankan Screener & Kirim Alert"):
-  if not api_key:
-    st.error("Silakan isi OpenAI API Key terlebih dahulu.")
+  if not gemini_api_key:
+    st.error("Silakan isi Gemini API Key terlebih dahulu di sidebar.")
   else:
-    client = openai.OpenAI(api_key=api_key)
+    # Menginisialisasi Client Google GenAI yang baru
+    client = genai.Client(api_key=gemini_api_key)
 
-    # Tahap 1: Mengubah teks menjadi kode query dataframe
     prompt_query = f"""
         Ubah instruksi ini menjadi parameter query pandas berdasarkan kolom: Ticker, Harga, Perubahan_%, Volume, Vol_Change_%, MA5, MA20, RSI.
         User request: "{user_query}"
@@ -152,12 +151,18 @@ if st.button("Jalankan Screener & Kirim Alert"):
         """
 
     try:
-      response_q = client.chat.completions.create(
-          model="gpt-4o-mini",
-          messages=[{"role": "user", "content": prompt_query}],
-          temperature=0.0,
+      # Menggunakan model tercepat gemini-2.5-flash
+      response_q = client.models.generate_content(
+          model="gemini-2.5-flash",
+          contents=prompt_query,
       )
-      q_string = response_q.choices.message.content.strip()
+      q_string = response_q.text.strip()
+
+      # Bersihkan tag codeblock jika didapatkan dari LLM
+      if q_string.startswith("```"):
+        q_string = (
+            q_string.replace("```python", "").replace("```", "").strip()
+        )
 
       df_filtered = df_jii70.query(q_string)
 
@@ -167,33 +172,27 @@ if st.button("Jalankan Screener & Kirim Alert"):
         st.success(f"Ditemukan {len(df_filtered)} saham potensial!")
         st.dataframe(df_filtered, use_container_width=True, hide_index=True)
 
-        # Tahap 2: Minta AI memberikan Rekomendasi & Analisis Beli/Jual
         prompt_analysis = f"""
             Anda adalah analis ekuitas senior bersertifikasi syariah (AASI).
             Berikut data saham JII70 hasil screening:
             {df_filtered.to_string()}
             
             Berikan rekomendasi dengan format terstruktur kaku JSON untuk mempermudah sistem.
-            Keluarkan HANYA format JSON valid seperti contoh di bawah, tanpa teks tambahan/markdown block.
+            Keluarkan HANYA format JSON array valid seperti contoh di bawah, tanpa teks tambahan/markdown block.
             
-            Contoh Format Output:
             [
               {{"ticker": "BRIS", "rekomendasi": "BELI", "alasan": "Harga diatas MA5 dan RSI oversold 35", "risk": "Cutloss jika tembus support 2500"}},
               {{"ticker": "TLKM", "rekomendasi": "HOLD", "alasan": "Konsolidasi di MA20", "risk": "Pantau volume beli"}}
             ]
             """
 
-        with st.spinner("AI sedang menyusun keputusan trading..."):
-          response_a = client.chat.completions.create(
-              model="gpt-4o-mini",
-              messages=[{"role": "user", "content": prompt_analysis}],
-              temperature=0.1,
+        with st.spinner("Gemini AI sedang menyusun keputusan trading..."):
+          response_a = client.models.generate_content(
+              model="gemini-2.5-flash",
+              contents=prompt_analysis,
           )
 
-          import json
-
-          raw_json = response_a.choices.message.content.strip()
-          # Membersihkan jika AI membungkus dengan ```json ... ```
+          raw_json = response_a.text.strip()
           if raw_json.startswith("```"):
             raw_json = (
                 raw_json.replace("```json", "").replace("```", "").strip()
@@ -203,9 +202,7 @@ if st.button("Jalankan Screener & Kirim Alert"):
 
           st.write("### ⚡ Hasil Analisis & Eksekusi Alert:")
 
-          # Menampilkan di Dashboard Web & Kirim ke Telegram jika Dapat Sinyal "BELI"
           for item in rekomendasi_list:
-            # Mengatur warna berdasarkan jenis rekomendasi
             color = (
                 "💚"
                 if item["rekomendasi"] == "BELI"
@@ -217,21 +214,17 @@ if st.button("Jalankan Screener & Kirim Alert"):
             st.markdown(f"- **Manajemen Risiko**: {item['risk']}")
             st.write("---")
 
-            # Kirim Notifikasi Otomatis ke Telegram khusus sinyal BELI (BUY Alert)
             if item["rekomendasi"] == "BELI":
               msg_telegram = (
-                  f"🚨 *JII70 AI BUY SIGNAL ALERT* 🚨\n\n"
+                  f"🚨 *JII70 GEMINI BUY ALERT* 🚨\n\n"
                   f"🔹 *Saham:* #{item['ticker']}\n"
                   f"🟢 *Rekomendasi:* BELI (BUY)\n"
                   f"📈 *Alasan:* {item['alasan']}\n"
                   f"🛡️ *Manajemen Risiko:* {item['risk']}\n\n"
-                  f"⚡ _Dikirim otomatis oleh AI Screener Dashboard_"
+                  f"⚡ _Sent from Gemini AI Screener Dashboard_"
               )
               send_telegram_alert(msg_telegram)
-              st.toast(
-                  f"🔔 Alert sinyal BELI untuk {item['ticker']} telah dikirim ke"
-                  " Telegram!"
-              )
+              st.toast(f"🔔 Sinyal BELI {item['ticker']} terkirim ke Telegram!")
 
     except Exception as e:
       st.error(f"Terjadi kesalahan pemrosesan: {e}")
