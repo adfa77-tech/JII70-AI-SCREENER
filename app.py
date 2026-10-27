@@ -21,7 +21,7 @@ api_key = st.sidebar.text_input("1. OpenAI API Key:", type="password")
 st.sidebar.markdown("---")
 st.sidebar.subheader("📢 Integrasi Telegram")
 tele_token = st.sidebar.text_input("2. Telegram Bot Token:", type="password")
-tele_chat_id = st.sidebar.text_input("3. Telegram Chat ID:", type="text")
+tele_chat_id = st.sidebar.text_input("3. Telegram Chat ID:"
 
 
 # Fungsi untuk mengirim pesan ke Telegram
