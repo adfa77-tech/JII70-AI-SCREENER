@@ -61,7 +61,6 @@ JII70_TICKERS = [
     "TAPG.JK", "TCPI.JK", "TINS.JK", "TKIM.JK", "TLKM.JK", "TOBA.JK", "TPIA.JK", "UNTR.JK", "UNVR.JK", "WIFI.JK"
 ]
 
-# Database Harga Sinkronisasi Terkini (Referensi Default jika Yahoo Finance Lambat/Gagal)
 FALLBACK_DATA = {
     "AADI": 2100, "ACES": 850, "ADMR": 1310, "ADRO": 3650, "AKRA": 1390,
     "ANTM": 1580, "ARCI": 310, "AVIA": 490, "BKSL": 55, "BRIS": 2980,
@@ -88,9 +87,9 @@ def calculate_rsi(series, period=14):
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
-@st.cache_data(ttl=300) # Cache diperpanjang jadi 5 menit agar tidak sering rate-limit
+@st.cache_data(ttl=300)
 def fetch_market_data():
-    ihsg_close, ihsg_pct = 7150.0, 0.35  # Update baseline IHSG yang lebih realistis
+    ihsg_close, ihsg_pct = 7150.0, 0.35
     try:
         ihsg = yf.Ticker("^JKSE")
         ihsg_hist = ihsg.history(period="5d")
@@ -101,14 +100,22 @@ def fetch_market_data():
         pass
 
     rows = []
-    # Menggunakan session yfinance untuk koneksi yang lebih stabil
+    # Menggunakan batch download agar lebih cepat & stabil dari Yahoo Finance
+    try:
+        data_batch = yf.download(JII70_TICKERS, period="1mo", group_by="ticker", threads=True, progress=False)
+    except Exception:
+        data_batch = pd.DataFrame()
+
     for t in JII70_TICKERS:
         clean_ticker = t.replace(".JK", "")
         base_price = FALLBACK_DATA.get(clean_ticker, 500)
         try:
-            stock = yf.Ticker(t)
-            hist = stock.history(period="1mo") # Mengambil data 1 bulan agar lebih ringan dan cepat
-            
+            if not data_batch.empty and t in data_batch.columns.levels[0]:
+                hist = data_batch[t].dropna(subset=['Close'])
+            else:
+                stock = yf.Ticker(t)
+                hist = stock.history(period="1mo")
+
             if hist.empty or len(hist) < 5 or pd.isna(hist['Close'].iloc[-1]):
                 raise ValueError("Data Kosong")
                 
@@ -124,16 +131,15 @@ def fetch_market_data():
 
             rows.append({
                 "Ticker": clean_ticker,
-                "Harga": round(today['Close'], 0),
-                "Perubahan_%": round(change, 2),
+                "Harga": round(float(today['Close']), 0),
+                "Perubahan_%": round(float(change), 2),
                 "Volume": int(today['Volume']) if not pd.isna(today['Volume']) else 1000000,
-                "Vol_Change_%": round(v_change, 2) if not pd.isna(v_change) else 0.0,
-                "MA5": round(today['MA5'], 0) if not pd.isna(today['MA5']) else round(today['Close'], 0),
-                "MA20": round(today['MA20'], 0) if not pd.isna(today['MA20']) else round(today['Close'], 0),
-                "RSI": round(today['RSI'], 2) if not pd.isna(today['RSI']) else 50.0
+                "Vol_Change_%": round(float(v_change), 2) if not pd.isna(v_change) else 0.0,
+                "MA5": round(float(today['MA5']), 0) if not pd.isna(today['MA5']) else round(float(today['Close']), 0),
+                "MA20": round(float(today['MA20']), 0) if not pd.isna(float(today['MA20'])) else round(float(today['Close']), 0),
+                "RSI": round(float(today['RSI']), 2) if not pd.isna(float(today['RSI'])) else 50.0
             })
         except Exception:
-            # Jika gagal ambil dari yfinance, gunakan fallback dengan variasi kecil agar tetap dinamis
             rows.append({
                 "Ticker": clean_ticker,
                 "Harga": base_price,
@@ -176,7 +182,7 @@ if st.button("Jalankan Screener & Kirim Alert"):
         try:
             with st.spinner("AI sedang menerjemahkan kriteria..."):
                 response_q = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
+                    model="llama3-70b-8192",  # Menggunakan model stabil yang aktif
                     messages=[{"role": "user", "content": prompt_query}],
                     temperature=0.0
                 )
@@ -210,7 +216,7 @@ if st.button("Jalankan Screener & Kirim Alert"):
 
                 with st.spinner("Groq AI sedang menyusun keputusan trading..."):
                     response_a = client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
+                        model="llama3-70b-8192",  # Menggunakan model stabil yang aktif
                         messages=[{"role": "user", "content": prompt_analysis}],
                         temperature=0.1
                     )
