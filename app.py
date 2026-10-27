@@ -38,7 +38,7 @@ def send_telegram_alert(message):
         except:
             pass
 
-# 3. DAFTAR 70 SAHAM JII70 YANG BENAR SESUAI INPUT USER
+# 3. DAFTAR LENGKAP 70 KODE SAHAM SYARIAH JII70 YANG BENAR
 JII70_TICKERS = [
     "AADI.JK", "ACES.JK", "ADMR.JK", "ADRO.JK", "AKRA.JK", "ANTM.JK", "ARCI.JK", "AVIA.JK", "BKSL.JK", "BRIS.JK",
     "BRMS.JK", "BSDE.JK", "BTPS.JK", "BUMI.JK", "CMRY.JK", "CPIN.JK", "CTRA.JK", "DEWA.JK", "DKFT.JK", "DSNG.JK",
@@ -160,7 +160,6 @@ if st.button("Jalankan Screener & Kirim Alert"):
         """
 
         try:
-            # Menggunakan model Llama resmi dari Groq
             response_q = client.chat.completions.create(
                 model="llama3-70b-8192",
                 messages=[{"role": "user", "content": prompt_query}],
@@ -210,10 +209,9 @@ if st.button("Jalankan Screener & Kirim Alert"):
 
                     for item in rekomendasi_list:
                         color = "💚" if item["rekomendasi"] == "BELI" else ("❤️" if item["rekomendasi"] == "JUAL" else "💛")
-
                         st.markdown(f"### {color} {item['ticker']} — **{item['rekomendasi']}**")
                         st.markdown(f"- **Alasan**: {item['alasan']}")
                         st.markdown(f"- **Manajemen Risiko**: {item['risk']}")
                         st.write("---")
-
                         if item["rekomendasi"] == "BELI":
+                            msg_telegram = f"🚨 *JII70 GROQ BUY ALERT* 🚨\n\n🔹 *Saham:* #{item['ticker']}\n🟢 *Rekomendasi:* BELI (BUY)\n📈 *Alasan:* {item['alasan']}\n🛡️ *Manajemen Risiko:* {item['risk']}\n\n⚡ _Sent from Groq AI Screener Dashboard_"
