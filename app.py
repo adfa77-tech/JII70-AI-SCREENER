@@ -38,6 +38,18 @@ def send_telegram_alert(message):
         except:
             pass
 
+# Fungsi pembantu untuk membungkus pengiriman pesan agar aman dari masalah indentasi
+def trigger_buy_alert(ticker_name, alasan_ai, risiko_ai):
+    msg = (
+        f"🚨 *JII70 GROQ BUY ALERT* 🚨\n\n"
+        f"🔹 *Saham:* #{ticker_name}\n"
+        f"🟢 *Rekomendasi:* BELI (BUY)\n"
+        f"📈 *Alasan:* {alasan_ai}\n"
+        f"🛡️ *Manajemen Risiko:* {risiko_ai}\n\n"
+        f"⚡ _Sent from Groq AI Screener Dashboard_"
+    )
+    send_telegram_alert(msg)
+
 # 3. DAFTAR LENGKAP 70 KODE SAHAM SYARIAH JII70 YANG BENAR
 JII70_TICKERS = [
     "AADI.JK", "ACES.JK", "ADMR.JK", "ADRO.JK", "AKRA.JK", "ANTM.JK", "ARCI.JK", "AVIA.JK", "BKSL.JK", "BRIS.JK",
@@ -211,7 +223,3 @@ if st.button("Jalankan Screener & Kirim Alert"):
                         color = "💚" if item["rekomendasi"] == "BELI" else ("❤️" if item["rekomendasi"] == "JUAL" else "💛")
                         st.markdown(f"### {color} {item['ticker']} — **{item['rekomendasi']}**")
                         st.markdown(f"- **Alasan**: {item['alasan']}")
-                        st.markdown(f"- **Manajemen Risiko**: {item['risk']}")
-                        st.write("---")
-                        if item["rekomendasi"] == "BELI":
-                            msg_telegram = f"🚨 *JII70 GROQ BUY ALERT* 🚨\n\n🔹 *Saham:* #{item['ticker']}\n🟢 *Rekomendasi:* BELI (BUY)\n📈 *Alasan:* {item['alasan']}\n🛡️ *Manajemen Risiko:* {item['risk']}\n\n⚡ _Sent from Groq AI Screener Dashboard_"
