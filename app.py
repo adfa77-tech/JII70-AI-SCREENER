@@ -89,7 +89,7 @@ def calculate_rsi(series, period=14):
 
 @st.cache_data(ttl=300)
 def fetch_market_data():
-    ihsg_close, ihsg_pct = 7150.0, 0.35
+    ihsg_close, ihsg_pct = 7250.0, 0.45
     try:
         ihsg = yf.Ticker("^JKSE")
         ihsg_hist = ihsg.history(period="5d")
@@ -100,7 +100,6 @@ def fetch_market_data():
         pass
 
     rows = []
-    # Menggunakan batch download agar lebih cepat & stabil dari Yahoo Finance
     try:
         data_batch = yf.download(JII70_TICKERS, period="1mo", group_by="ticker", threads=True, progress=False)
     except Exception:
@@ -116,7 +115,7 @@ def fetch_market_data():
                 stock = yf.Ticker(t)
                 hist = stock.history(period="1mo")
 
-            if hist.empty or len(hist) < 5 or pd.isna(hist['Close'].iloc[-1]):
+            if hist.empty or len(hist) < 2 or pd.isna(hist['Close'].iloc[-1]):
                 raise ValueError("Data Kosong")
                 
             hist['MA5'] = hist['Close'].rolling(window=5).mean()
@@ -124,7 +123,7 @@ def fetch_market_data():
             hist['RSI'] = calculate_rsi(hist['Close'], period=14)
 
             today = hist.iloc[-1]
-            yesterday = hist.iloc[-2] if len(hist) >= 2 else today
+            yesterday = hist.iloc[-2]
 
             change = ((today['Close'] - yesterday['Close']) / yesterday['Close']) * 100 if yesterday['Close'] > 0 else 0.0
             v_change = ((today['Volume'] - yesterday['Volume']) / yesterday['Volume']) * 100 if yesterday['Volume'] > 0 else 0.0
@@ -160,8 +159,18 @@ st.metric(
     delta=f"{ihsg_chg:.2f}%"
 )
 
+# Fungsi Pewarnaan Angka / Conditional Formatting pada Tabel
+def color_coding(val):
+    if isinstance(val, (int, float)):
+        if val > 0:
+            return 'color: #2e7d32; font-weight: bold;'  # Hijau untuk positif
+        elif val < 0:
+            return 'color: #c62828; font-weight: bold;'  # Merah untuk negatif
+    return ''
+
 st.write(f"### 📋 Monitor Pasar Saham Syariah JII70 Terbaru ({len(df_jii70)} Emiten Aktif)")
-st.dataframe(df_jii70, use_container_width=True, hide_index=True)
+df_styled = df_jii70.style.map(color_coding, subset=['Perubahan_%', 'Vol_Change_%'])
+st.dataframe(df_styled, use_container_width=True, hide_index=True)
 st.write("---")
 
 st.write("### 🤖 Jalankan Perintah Screening AI Groq")
@@ -182,7 +191,7 @@ if st.button("Jalankan Screener & Kirim Alert"):
         try:
             with st.spinner("AI sedang menerjemahkan kriteria..."):
                 response_q = client.chat.completions.create(
-                    model="llama3-70b-8192",  # Menggunakan model stabil yang aktif
+                    model="llama-3.3-70b-versatile",  # Diperbarui ke model aktif
                     messages=[{"role": "user", "content": prompt_query}],
                     temperature=0.0
                 )
@@ -198,7 +207,8 @@ if st.button("Jalankan Screener & Kirim Alert"):
                 st.warning("Tidak ada saham syariah yang cocok dengan kriteria tersebut.")
             else:
                 st.success(f"Ditemukan {len(df_filtered)} saham potensial!")
-                st.dataframe(df_filtered, use_container_width=True, hide_index=True)
+                df_filtered_styled = df_filtered.style.map(color_coding, subset=['Perubahan_%', 'Vol_Change_%'])
+                st.dataframe(df_filtered_styled, use_container_width=True, hide_index=True)
 
                 prompt_analysis = f"""
                 Anda adalah analis ekuitas senior bersertifikasi syariah (AASI).
@@ -216,7 +226,7 @@ if st.button("Jalankan Screener & Kirim Alert"):
 
                 with st.spinner("Groq AI sedang menyusun keputusan trading..."):
                     response_a = client.chat.completions.create(
-                        model="llama3-70b-8192",  # Menggunakan model stabil yang aktif
+                        model="llama-3.3-70b-versatile",  # Diperbarui ke model aktif
                         messages=[{"role": "user", "content": prompt_analysis}],
                         temperature=0.1
                     )
