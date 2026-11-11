@@ -235,8 +235,6 @@ elif app_mode == "🔥 Saham Strong Buy":
     @st.cache_data(ttl=120)
     def fetch_strong_buy_stocks(tickers):
         strong_buy_list = []
-        
-        # Variasi alasan teknikal profesional untuk variasi emiten Strong Buy
         reason_bank = [
             "Terdeteksi lonjakan volume akumulasi institusi besar di area support psikologis, didukung indikator MACD yang melakukan golden cross konfirmasi tren bullish.",
             "Harga memantul (rebound) dari garis Moving Average utama dengan relative strength index (RSI) keluar dari zona jenuh jual (oversold), mengindikasikan potensi rally lanjutan.",
@@ -396,4 +394,11 @@ elif app_mode == "📋 Direktori & Tabel JII70":
         "Previous Close": "{:,.2f}",
         "Open": "{:,.2f}",
         "High": "{:,.2f}",
-        "Low":
+        "Low": "{:,.2f}",
+        "Close": "{:,.2f}",
+        "Perubahan (%)": "{:+.2f}%",
+        "Volume": "{:,.0f}"
+    }).map(color_pricing_rules, subset=["Previous Close", "Open", "High", "Low", "Close", "Perubahan (%)"])
+
+    st.dataframe(styled_df, use_container_width=True, hide_index=True)
+    st.markdown("</div>", unsafe_allow_html=True)
