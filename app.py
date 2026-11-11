@@ -337,4 +337,59 @@ elif app_mode == "📋 Direktori & Tabel JII70":
     @st.cache_data(ttl=120)
     def fetch_market_data(tickers_subset):
         data_rows = []
-        for idx, t in enumerate
+        for idx, t in enumerate(tickers_subset, 1):
+            try:
+                tk = yf.Ticker(f"{t}.JK")
+                hist = tk.history(period="2d")
+                if not hist.empty:
+                    close_val = hist['Close'].iloc[-1]
+                    open_val = hist['Open'].iloc[-1]
+                    high_val = hist['High'].iloc[-1]
+                    low_val = hist['Low'].iloc[-1]
+                    vol_val = hist['Volume'].iloc[-1]
+                    prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else open_val
+                    change = close_val - prev_close
+                    pct_change = (change / prev_close) * 100 if prev_close > 0 else 0
+                else:
+                    close_val, open_val, high_val, low_val, vol_val, prev_close, change, pct_change = 0, 0, 0, 0, 0, 0, 0, 0
+            except Exception:
+                close_val, open_val, high_val, low_val, vol_val, prev_close, change, pct_change = 0, 0, 0, 0, 0, 0, 0, 0
+
+            data_rows.append({
+                "No": idx,
+                "Kode": t,
+                "Previous Close": prev_close,
+                "Open": open_val,
+                "High": high_val,
+                "Low": low_val,
+                "Close": close_val,
+                "Perubahan (%)": pct_change,
+                "Volume": vol_val
+            })
+        return pd.DataFrame(data_rows)
+
+    display_subset = filtered_stocks[:batch_size]
+    
+    with st.spinner("Mengambil data pasar saham JII70 real-time dari Yahoo Finance..."):
+        df_table = fetch_market_data(display_subset)
+
+    def color_pricing_rules(val):
+        if isinstance(val, (int, float)):
+            if val > 0:
+                return 'color: #00ff87; font-weight: bold;'
+            elif val < 0:
+                return 'color: #ff4d4d; font-weight: bold;'
+        return 'color: #ffffff;'
+
+    styled_df = df_table.style.format({
+        "Previous Close": "{:,.2f}",
+        "Open": "{:,.2f}",
+        "High": "{:,.2f}",
+        "Low": "{:,.2f}",
+        "Close": "{:,.2f}",
+        "Perubahan (%)": "{:+.2f}%",
+        "Volume": "{:,.0f}"
+    }).map(color_pricing_rules, subset=["Previous Close", "Open", "High", "Low", "Close", "Perubahan (%)"])
+
+    st.dataframe(styled_df, use_container_width=True, hide_index=True)
+    st.markdown("</div>", unsafe_allow_html=True)
