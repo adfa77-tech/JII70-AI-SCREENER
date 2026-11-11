@@ -121,6 +121,9 @@ def fetch_single_stock_data(ticker, period="120d"):
     try:
         df = _flatten_df(yf.download(ticker, period=period, interval="1d", progress=False))
         if not df.empty and len(df) >= 15:
+            # Hilangkan timezone agar aman dirender Plotly
+            if isinstance(df.index, pd.DatetimeIndex):
+                df.index = df.index.tz_localize(None)
             df = calculate_technical_indicators(df)
             return df
     except Exception:
@@ -505,7 +508,7 @@ elif app_mode == "📋 Direktori & Tabel JII70":
     if not df_table.empty:
         st.write(f"Menampilkan **{len(df_table)} emiten** aktif dengan volume transaksi di atas Rp 5 Miliar.")
         
-        df_display = df_table[["No", "Kode", "Previous Close", "Open", "High", "Low", "Close", "Perubahan (%)"]].copy()
+        df_display = df_table[["No", "Kode", "Previous Close", "Open", "High", "Low", "Close", "Perubahan (%)"]].copy() konflik
         df_display["Nilai Transaksi"] = df_table["Nilai Transaksi (Rp)"].apply(lambda x: f"Rp {x:,.0f}")
 
         def color_pricing_rules(val):
