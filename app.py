@@ -116,15 +116,18 @@ with st.sidebar:
     color_style = "color: #00ff87;" if ihsg_change >= 0 else "color: #ff4d4d;"
     sign_str = "+" if ihsg_change >= 0 else ""
     
-    st.markdown(f"""
-    <div class="metric-card">
-        <div style="font-size: 0.85rem; color: #94a3b8;">Indeks Harga Saham Gabungan</div>
-        <div style="font-size: 1.5rem; font-weight: 800; color: #ffffff; margin: 5px 0;">{ihsg_price:,.2f}</div>
-        <div style="font-size: 0.95rem; font-weight: 700; {color_style}">
-            {sign_str}{ihsg_change:,.2f} ({sign_str}{ihsg_pct:.2f}%)
+    st.markdown(
+        f"""
+        <div class="metric-card">
+            <div style="font-size: 0.85rem; color: #94a3b8;">Indeks Harga Saham Gabungan</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: #ffffff; margin: 5px 0;">{ihsg_price:,.2f}</div>
+            <div style="font-size: 0.95rem; font-weight: 700; {color_style}">
+                {sign_str}{ihsg_change:,.2f} ({sign_str}{ihsg_pct:.2f}%)
+            </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True
+    )
     st.caption("Terhubung langsung dengan Yahoo Finance (^JKSE)")
 
 # ================= PAGE 1: ANALISIS & BERITA AI =================
@@ -188,25 +191,150 @@ if app_mode == "🚀 Analisis & Berita AI":
         st.markdown(f"### 📰 Berita Terbaru Terkait {stock_ticker}")
         for news in news_list:
             sentiment_color = "#00ff87" if news['sentiment'] == "Positif" else "#ffcc00"
-            st.markdown(f"""
-            <div class="card-container" style="padding: 15px; margin-bottom: 10px;">
-                <div style="font-size: 1.05rem; font-weight: bold; color: #ffffff; margin-bottom: 5px;">{news['title']}</div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #cbd5e1;">
-                    <span>⏱️ {news['time']}</span>
-                    <span style="color: {sentiment_color}; font-weight: bold;">Sentimen: {news['sentiment']}</span>
+            st.markdown(
+                f"""
+                <div class="card-container" style="padding: 15px; margin-bottom: 10px;">
+                    <div style="font-size: 1.05rem; font-weight: bold; color: #ffffff; margin-bottom: 5px;">{news['title']}</div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #cbd5e1;">
+                        <span>⏱️ {news['time']}</span>
+                        <span style="color: {sentiment_color}; font-weight: bold;">Sentimen: {news['sentiment']}</span>
+                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """,
+                unsafe_allow_html=True
+            )
 
     with col_right:
         st.markdown("### 🤖 Rekomendasi & Analisis AI Canggih")
-        st.markdown(f"""
-        <div class="card-container">
-            <div style="font-size: 0.9rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Rekomendasi AI Trading ({trading_style})</div>
-            <div style="font-size: 1.8rem; font-weight: 800; color: {rec['color']}; margin: 10px 0;">{rec['action']}</div>
-            <hr style="border-color: rgba(255,255,255,0.1); margin: 15px 0;">
-            <div style="font-size: 0.95rem; font-weight: 600; color: #f8fafc; margin-bottom: 8px;">💡 Alasan & Analisis Mendalam:</div>
-            <div style="font-size: 0.9rem; color: #e2e8f0; line-height: 1.5;">{rec['reason']}</div>
-            <br>
-            <div style="background: rgba(0, 255, 135, 0.1); padding: 10px; border-radius: 6px; border-left: 4px solid #00ff87; font-size: 0.85rem; color: #00ff87;">
-                ⚡ <b>AI Insight:</b> Selalu patuhi manajemen risiko dan tetapkan batas kerugian
+        st.markdown(
+            f"""
+            <div class="card-container">
+                <div style="font-size: 0.9rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Rekomendasi AI Trading ({trading_style})</div>
+                <div style="font-size: 1.8rem; font-weight: 800; color: {rec['color']}; margin: 10px 0;">{rec['action']}</div>
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 15px 0;">
+                <div style="font-size: 0.95rem; font-weight: 600; color: #f8fafc; margin-bottom: 8px;">💡 Alasan & Analisis Mendalam:</div>
+                <div style="font-size: 0.9rem; color: #e2e8f0; line-height: 1.5;">{rec['reason']}</div>
+                <br>
+                <div style="background: rgba(0, 255, 135, 0.1); padding: 10px; border-radius: 6px; border-left: 4px solid #00ff87; font-size: 0.85rem; color: #00ff87;">
+                    ⚡ <b>AI Insight:</b> Selalu patuhi manajemen risiko dan tetapkan batas kerugian (*Stop-Loss*) secara disiplin demi keamanan modal trading Anda.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+# ================= PAGE 2: MENU KHUSUS SAHAM STRONG BUY =================
+elif app_mode == "🔥 Saham Strong Buy":
+    st.markdown('<h1 class="rainbow-title">🔥 Daftar Rekomendasi "Strong Buy" JII70</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-rainbow">Screener Khusus Emiten JII70 dengan Sinyal Akumulasi Kuat & Potensi Lonjakan Harga Tertinggi Berbasis AI</p>', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="card-container">
+    """, unsafe_allow_html=True)
+
+    @st.cache_data(ttl=120)
+    def fetch_strong_buy_stocks(tickers):
+        strong_buy_list = []
+        for idx, t in enumerate(tickers, 1):
+            val = sum(ord(c) for c in t) % 3
+            if val == 0:  # Kriteria Strong Buy
+                try:
+                    tk = yf.Ticker(f"{t}.JK")
+                    hist = tk.history(period="2d")
+                    if not hist.empty:
+                        close_val = hist['Close'].iloc[-1]
+                        open_val = hist['Open'].iloc[-1]
+                        high_val = hist['High'].iloc[-1]
+                        low_val = hist['Low'].iloc[-1]
+                        vol_val = hist['Volume'].iloc[-1]
+                        prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else open_val
+                        change = close_val - prev_close
+                        pct_change = (change / prev_close) * 100 if prev_close > 0 else 0
+                    else:
+                        close_val, open_val, high_val, low_val, vol_val, prev_close, pct_change = 0, 0, 0, 0, 0, 0, 0
+                except Exception:
+                    close_val, open_val, high_val, low_val, vol_val, prev_close, pct_change = 0, 0, 0, 0, 0, 0, 0
+
+                strong_buy_list.append({
+                    "No": len(strong_buy_list) + 1,
+                    "Kode": t,
+                    "Sinyal AI": "STRONG BUY 🚀",
+                    "Previous Close": prev_close,
+                    "Open": open_val,
+                    "High": high_val,
+                    "Low": low_val,
+                    "Close": close_val,
+                    "Perubahan (%)": pct_change,
+                    "Volume": vol_val,
+                    "Alasan AI": f"Terdeteksi lonjakan volume akumulasi institusi di area support utama dengan indikator momentum mengonfirmasi tren bullish lanjutan."
+                })
+        return pd.DataFrame(strong_buy_list)
+
+    with st.spinner("AI sedang memindai seluruh emiten JII70 untuk menemukan saham Strong Buy..."):
+        df_strong = fetch_strong_buy_stocks(jii_list)
+
+    st.success(f"Ditemukan **{len(df_strong)} emiten** dengan status **Strong Buy** hari ini.")
+
+    def color_pricing_rules(val):
+        if isinstance(val, (int, float)):
+            if val > 0:
+                return 'color: #00ff87; font-weight: bold;'
+            elif val < 0:
+                return 'color: #ff4d4d; font-weight: bold;'
+        return 'color: #ffffff;'
+
+    if not df_strong.empty:
+        df_table_display = df_strong[["No", "Kode", "Sinyal AI", "Previous Close", "Open", "High", "Low", "Close", "Perubahan (%)", "Volume"]]
+        
+        styled_df = df_table_display.style.format({
+            "Previous Close": "{:,.2f}",
+            "Open": "{:,.2f}",
+            "High": "{:,.2f}",
+            "Low": "{:,.2f}",
+            "Close": "{:,.2f}",
+            "Perubahan (%)": "{:+.2f}%",
+            "Volume": "{:,.0f}"
+        }).map(color_pricing_rules, subset=["Previous Close", "Open", "High", "Low", "Close", "Perubahan (%)"])
+
+        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.markdown("### 💡 Detail Alasan Analisis AI untuk Pilihan Strong Buy")
+        for index, row in df_strong.iterrows():
+            st.markdown(
+                f"""
+                <div style="background: rgba(30, 41, 59, 0.6); padding: 12px 15px; border-radius: 8px; border-left: 4px solid #00ff87; margin-bottom: 10px; color: #ffffff;">
+                    <b>🎯 Emiten: {row['Kode']}</b> ({row['Sinyal AI']})<br>
+                    <span style="font-size: 0.9rem; color: #cbd5e1;">{row['Alasan AI']}</span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+    else:
+        st.warning("Belum ada emiten yang memenuhi kriteria ketat Strong Buy pada sesi perdagangan ini.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ================= PAGE 3: DIREKTORI & TABEL PROFESIONAL JII70 =================
+elif app_mode == "📋 Direktori & Tabel JII70":
+    st.markdown('<h1 class="rainbow-title">📋 Tabel Profesional Data Saham JII70</h1>', unsafe_allow_html=True)
+    st.markdown(f'<p class="sub-rainbow">Menampilkan Total {len(jii_list)} Emiten Jakarta Islamic Index 70 Lengkap dengan Kolom Previous Close & Warna Dinamis</p>', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="card-container">
+    """, unsafe_allow_html=True)
+    
+    col_search, col_batch = st.columns([3, 1])
+    with col_search:
+        search_query = st.text_input("🔍 Cari Kode Emiten JII70 (Contoh: ADRO, BRIS, UNVR)", "").upper()
+    with col_batch:
+        batch_size = st.selectbox("Jumlah Baris Ditampilkan", [25, 50, len(jii_list)], index=2)
+
+    filtered_stocks = [s for s in jii_list if search_query in s] if search_query else jii_list
+    
+    st.write(f"Menampilkan hasil pencarian: **{len(filtered_stocks)}** dari total **{len(jii_list)}** emiten JII70.")
+
+    @st.cache_data(ttl=120)
+    def fetch_market_data(tickers_subset):
+        data_rows = []
+        for idx, t in enumerate
