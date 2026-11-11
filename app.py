@@ -1,10 +1,11 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import csv
 
 # Konfigurasi Halaman (Layout Lebar)
 st.set_page_config(
-    page_title="AI Stock Analyzer Pro - IHSG",
+    page_title="AI Stock Analyzer Pro - ISSI",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -64,18 +65,36 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Fungsi untuk memuat daftar saham ISSI dari file CSV
+@st.cache_data
+def load_issi_stocks():
+    stocks = []
+    try:
+        with open('SAHAM ISSI.csv', 'r', encoding='utf-8', errors='ignore') as f:
+            reader = csv.reader(f, delimiter=';')
+            for row in reader:
+                if len(row) >= 2:
+                    kode = row[1].strip()
+                    if kode and kode != 'Kode':
+                        stocks.append(kode)
+    except Exception:
+        # Fallback list jika file tidak terbaca langsung
+        stocks = ['AADI', 'AALI', 'ABMM', 'ACES', 'ADCP', 'ADES', 'ADMG', 'ADMR', 'ADRO', 'AGAR', 'AGII', 'AISA', 'AKPI', 'AKRA', 'ALDO', 'ANTM', 'ASII', 'BBCA', 'BBRI', 'BMRI', 'TLKM']
+    return sorted(list(set(stocks)))
+
+issi_list = load_issi_stocks()
+
 # Judul Utama dengan Teks Warna-Warni
-st.markdown('<h1 class="rainbow-title">🏙️ AI Smart Stock Analyzer & News Hub</h1>', unsafe_allow_html=True)
-st.markdown('<p class="sub-rainbow">Platform Analisis Saham IHSG Canggih dengan Rekomendasi Real-time & Berita Terkini</p>', unsafe_allow_html=True)
+st.markdown('<h1 class="rainbow-title">🏙️ AI Smart Stock Analyzer & ISSI News Hub</h1>', unsafe_allow_html=True)
+st.markdown('<p class="sub-rainbow">Platform Analisis Saham Indeks Saham Syariah Indonesia (ISSI) dengan Rekomendasi Real-time & Berita Terkini</p>', unsafe_allow_html=True)
 
 # --- PANEL KONTROL UTAMA ---
 with st.container():
     col1, col2, col3 = st.columns([2, 2, 1])
     with col1:
         selected_stock = st.selectbox(
-            "🔍 Pilih Emiten Saham (IHSG)",
-            ["BBCA (Bank Central Asia Tbk)", "BBRI (Bank Rakyat Indonesia Tbk)", "ASII (Astra International Tbk)", 
-             "TLKM (Telkom Indonesia Tbk)", "ADRO (Adaro Energy Indonesia Tbk)", "BMRI (Bank Mandiri Tbk)"]
+            "🔍 Pilih Emiten Saham (ISSI)",
+            issi_list
         )
     with col2:
         trading_style = st.selectbox(
@@ -86,68 +105,42 @@ with st.container():
         st.write("&nbsp;")
         analyze_btn = st.button("🚀 Jalankan AI Analisis", type="primary", use_container_width=True)
 
-# Simulasi Data Berita & Analisis Berdasarkan Pilihan Saham
-stock_ticker = selected_stock.split(" ")[0]
+# Ekstraksi Ticker Saham yang dipilih
+stock_ticker = selected_stock
 
-news_database = {
-    "BBCA": [
-        {"title": "BBCA Catat Pertumbuhan Volume Transaksi Digital Sebesar 18% YoY", "time": "2 jam lalu", "sentiment": "Positif"},
-        {"title": "Analis Asing Kembali Akumulasi Saham Big Banks Menjelang Akhir Bulan", "time": "5 jam lalu", "sentiment": "Positif"}
-    ],
-    "BBRI": [
-        {"title": "Fokus Pembiayaan Mikro, Segmen Kridit Usaha Rakyat (KUR) Tunjukkan Tren Sehat", "time": "1 jam lalu", "sentiment": "Positif"},
-        {"title": "Diterpa Isu Likuiditas Global, Sektor Perbankan Tetap Menarik Perhatian Investor", "time": "4 jam lalu", "sentiment": "Netral"}
-    ],
-    "ASII": [
-        {"title": "Penjualan Kendaraan Bermotor Roda Empat Mengalami Penyesuaian Tipis", "time": "3 jam lalu", "sentiment": "Netral"},
-        {"title": "Divisi Alat Berat dan Pertambangan Sumbang Pendapatan Solid", "time": "6 jam lalu", "sentiment": "Positif"}
-    ],
-    "TLKM": [
-        {"title": "Telkom Perkuat Infrastruktur Konektivitas Data Center di Batam dan Jakarta", "time": "1 jam lalu", "sentiment": "Positif"},
-        {"title": "Konsolidasi Harga Telkom, Peluang Akumulasi Jangka Panjang?", "time": "7 jam lalu", "sentiment": "Netral"}
-    ],
-    "ADRO": [
-        {"title": "Harga Komoditas Batubara Global Bergerak Fluktuatif di Tengah Permintaan Asia", "time": "2 jam lalu", "sentiment": "Netral"},
-        {"title": "Adaro Terus Genjot Diversifikasi ke Sektor Energi Hijau & Smelter", "time": "4 jam lalu", "sentiment": "Positif"}
-    ],
-    "BMRI": [
-        {"title": "Bank Mandiri Optimis Proyeksi Kinerja Kuartal Ini Melampaui Target Konsensus", "time": "30 menit lalu", "sentiment": "Positif"},
-        {"title": "Foreign Outflow Mereda, Saham Blue Chip Perbankan Jadi Incaran", "time": "5 jam lalu", "sentiment": "Positif"}
+# Generator Simulasi Berita Dinamis Berdasarkan Emiten ISSI
+def get_dynamic_news(ticker):
+    return [
+        {"title": f"{ticker} Catat Pertumbuhan Kinerja Fundamental Solid pada Kuartal Berjalan", "time": "1 jam lalu", "sentiment": "Positif"},
+        {"title": f"Analisis Teknikal & Pergerakan Volume Transaksi Harian {ticker} Menunjukkan Akumulasi", "time": "4 jam lalu", "sentiment": "Positif"},
+        {"title": f"Dinamika Pasar & Sentimen Makroekonomi Pengaruhi Pergerakan Saham {ticker}", "time": "7 jam lalu", "sentiment": "Netral"}
     ]
-}
 
-recommendation_database = {
-    "BBCA": {
-        "action": "STRONG BUY (AKUMULASI KUAT)",
-        "color": "#00FF7F",
-        "reason": "Secara teknikal berada di area support kuat dengan dukungan broker flow akumulasi asing. Valuasi masih atraktif untuk swing trade dan momentum penguatan lanjutan."
-    },
-    "BBRI": {
-        "action": "BUY ON WEAKNESS",
-        "color": "#00FF7F",
-        "reason": "Pola pergerakan harga membentuk rounding bottom jangka pendek. Indikator MACD menunjukkan potensi golden cross, sangat baik untuk strategi akumulasi bertahap."
-    },
-    "ASII": {
-        "action": "HOLD / TRADING BUY",
-        "color": "#FFD700",
-        "reason": "Pergerakan cenderung konsolidasi (sideways). Tunggu konfirmasi breakout resistance terdekat sebelum melakukan penambahan posisi dalam jumlah besar."
-    },
-    "TLKM": {
-        "action": "ACCUMULATE BUY",
-        "color": "#00FF7F",
-        "reason": "Valuasi Price to Earnings (P/E) rasio berada di bawah rata-rata historis 3 tahun. Dividen yield yang stabil memberikan proteksi margin bawah yang kuat."
-    },
-    "ADRO": {
-        "action": "SPECULATIVE BUY",
-        "color": "#00FF7F",
-        "reason": "Sangat sensitif terhadap pergerakan harga komoditas harian. Cocok untuk trader cepat (scalper) memanfaatkan pantulan (bounce) dari support minor."
-    },
-    "BMRI": {
-        "action": "STRONG BUY",
-        "color": "#00FF7F",
-        "reason": "Pertumbuhan laba bersih konsisten dengan efisiensi operasional yang terjaga dengan baik. Volume transaksi harian melonjak signifikan di sesi kedua."
-    }
-}
+# Generator Rekomendasi & Alasan AI Dinamis
+def get_ai_recommendation(ticker, style):
+    # Menggunakan hash sederhana agar konsisten namun variatif antar emiten
+    val = sum(ord(c) for c in ticker) % 3
+    if val == 0:
+        return {
+            "action": "STRONG BUY (AKUMULASI KUAT)",
+            "color": "#00FF7F",
+            "reason": f"Berdasarkan analisis {style}, {ticker} memantul dari area support penting dengan lonjakan volume beli dari investor institusi. Konfirmasi indikator momentum menunjukkan ruang kenaikan yang terbuka lebar."
+        }
+    elif val == 1:
+        return {
+            "action": "BUY ON WEAKNESS",
+            "color": "#00FF7F",
+            "reason": f"Pola pergerakan harga {ticker} berada dalam fase konsolidasi sehat. Strategi terbaik adalah akumulasi bertahap di area support terdekat untuk mengoptimalkan potensi profit swing trade."
+        }
+    else:
+        return {
+            "action": "HOLD / TRADING BUY",
+            "color": "#FFD700",
+            "reason": f"Pergerakan harga {ticker} cenderung sideways dalam rentang konsolidasi ketat. Tunggu konfirmasi breakout volume tinggi sebelum masuk dengan posisi yang lebih besar."
+        }
+
+news_list = get_dynamic_news(stock_ticker)
+rec = get_ai_recommendation(stock_ticker, trading_style)
 
 # --- TAMPILAN HASIL ANALISIS & BERITA ---
 st.markdown("---")
@@ -155,9 +148,7 @@ st.markdown("---")
 col_left, col_right = st.columns([1.2, 1])
 
 with col_left:
-    st.markdown("### 📰 Berita Terbaru Terkait " + stock_ticker)
-    news_list = news_database.get(stock_ticker, [])
-    
+    st.markdown(f"### 📰 Berita Terbaru Terkait {stock_ticker}")
     for news in news_list:
         sentiment_color = "#00ff87" if news['sentiment'] == "Positif" else "#ffcc00"
         st.markdown(f"""
@@ -172,8 +163,6 @@ with col_left:
 
 with col_right:
     st.markdown("### 🤖 Rekomendasi & Analisis AI Canggih")
-    rec = recommendation_database.get(stock_ticker, {"action": "HOLD", "color": "#FFD700", "reason": "Analisis netral berdasarkan kondisi pasar saat ini."})
-    
     st.markdown(f"""
     <div class="card-container">
         <div style="font-size: 0.9rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Rekomendasi AI Trading ({trading_style})</div>
@@ -183,7 +172,7 @@ with col_right:
         <div style="font-size: 0.9rem; color: #e2e8f0; line-height: 1.5;">{rec['reason']}</div>
         <br>
         <div style="background: rgba(0, 255, 135, 0.1); padding: 10px; border-radius: 6px; border-left: 4px solid #00ff87; font-size: 0.85rem; color: #00ff87;">
-            ⚡ <b>AI Insight:</b> Risiko terkelola dengan baik. Selalu pasang batasan risiko (*Trailing Stop-Loss*) sesuai profil manajemen risiko Anda.
+            ⚡ <b>AI Insight:</b> Selalu patuhi manajemen risiko dan tetapkan batas kerugian (*Trailing Stop-Loss*) secara disiplin demi keamanan portofolio Anda.
         </div>
     </div>
     """, unsafe_allow_html=True)
