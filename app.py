@@ -70,24 +70,29 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Fungsi untuk memuat daftar saham ISSI dari file Excel (SAHAM ISSI.xlsx)
+# Fungsi untuk memuat SELURUH daftar saham ISSI dari file Excel (SAHAM ISSI.xlsx)
 @st.cache_data
 def load_issi_stocks_excel():
     stocks = []
     try:
-        # Membaca file excel dengan sheet pertama atau bernama 'SAHAM ISSI'
-        df = pd.read_excel('SAHAM ISSI.xlsx', sheet_name='SAHAM ISSI', skiprows=2, header=None)
-        # Kolom ke-1 (indeks 1) berisi kode emiten
-        stocks = df.iloc[:, 1].dropna().astype(str).str.strip().tolist()
+        df = pd.read_excel('SAHAM ISSI.xlsx', sheet_name='SAHAM ISSI', skiprows=1, header=0)
+        # Mengambil kolom 'Kode' dan membersihkannya
+        if 'Kode' in df.columns:
+            stocks = df['Kode'].dropna().astype(str).str.strip().tolist()
+        else:
+            stocks = df.iloc[:, 1].dropna().astype(str).str.strip().tolist()
     except Exception as e:
-        # Fallback jika terjadi kendala pembacaan file excel
+        # Fallback jika terjadi kendala file
         stocks = ['AADI', 'AALI', 'ABMM', 'ACES', 'ADCP', 'ADES', 'ADMG', 'ADMR', 'ADRO', 'AGAR', 'AGII', 'AISA', 'AKPI', 'AKRA', 'ALDO', 'ANTM', 'ASII', 'BBCA', 'BBRI', 'BMRI', 'TLKM']
-    return sorted(list(set([s for s in stocks if s and s != 'nan'])))
+    
+    # Filter dan pastikan unik serta urut
+    cleaned = sorted(list(set([s for s in stocks if s and s.lower() != 'nan' and s != 'Kode'])))
+    return cleaned
 
 issi_list = load_issi_stocks_excel()
 
 # Fungsi untuk mengambil data IHSG Real-Time dari Yahoo Finance (^JKSE)
-@st.cache_data(ttl=60) # Cache selama 60 detik agar akses cepat
+@st.cache_data(ttl=60)
 def get_ihsg_realtime():
     try:
         ihsg = yf.Ticker("^JKSE")
@@ -100,14 +105,14 @@ def get_ihsg_realtime():
             return current_price, change, pct_change
     except Exception:
         pass
-    return 7350.50, 25.30, 0.35 # Fallback data jika offline
+    return 7350.50, 25.30, 0.35
 
 ihsg_price, ihsg_change, ihsg_pct = get_ihsg_realtime()
 
 # --- SIDEBAR NAVIGASI & WIDGET IHSG REALTIME ---
 with st.sidebar:
     st.markdown("### 🌐 Navigasi Menu")
-    app_mode = st.radio("Pilih Halaman", ["🚀 Analisis & Berita AI", "📋 Daftar Saham ISSI Lengkap"])
+    app_mode = st.radio("Pilih Halaman", ["🚀 Analisis & Berita AI", "📋 Direktori & Tabel Saham ISSI"])
     
     st.markdown("---")
     st.markdown("### 📊 IHSG Real-Time (Yahoo Finance)")
@@ -130,13 +135,12 @@ if app_mode == "🚀 Analisis & Berita AI":
     st.markdown('<h1 class="rainbow-title">🏙️ AI Smart Stock Analyzer & ISSI News Hub</h1>', unsafe_allow_html=True)
     st.markdown('<p class="sub-rainbow">Platform Analisis Saham Syariah (ISSI) Canggih dengan Rekomendasi Real-time & Berita Terkini</p>', unsafe_allow_html=True)
 
-    # Panel Kontrol Utama
     with st.container():
         col1, col2, col3 = st.columns([2, 2, 1])
         with col1:
             selected_stock = st.selectbox(
-                "🔍 Pilih Emiten Saham ISSI",
-                [f"{s} (ISSI Emiten)" for s in issi_list]
+                f"🔍 Pilih Emiten Saham ISSI (Total: {len(issi_list)} Emiten)",
+                [f"{s}" for s in issi_list]
             )
         with col2:
             trading_style = st.selectbox(
@@ -149,7 +153,6 @@ if app_mode == "🚀 Analisis & Berita AI":
 
     stock_ticker = selected_stock.split(" ")[0]
 
-    # Generator Berita Dinamis
     def get_dynamic_news(ticker):
         return [
             {"title": f"{ticker} Catat Kinerja Fundamental Solid dan Pertumbuhan Volume Penjualan Berkelanjutan", "time": "1 jam lalu", "sentiment": "Positif"},
@@ -157,7 +160,6 @@ if app_mode == "🚀 Analisis & Berita AI":
             {"title": f"Dinamika Pasar & Sentimen Sektor Syariah Menguji Level Resistance {ticker}", "time": "6 jam lalu", "sentiment": "Netral"}
         ]
 
-    # Generator Rekomendasi & Alasan AI
     def get_ai_recommendation(ticker, style):
         val = sum(ord(c) for c in ticker) % 3
         if val == 0:
@@ -215,23 +217,64 @@ if app_mode == "🚀 Analisis & Berita AI":
         </div>
         """, unsafe_allow_html=True)
 
-# ================= PAGE 2: DAFTAR SAHAM ISSI LENGKAP =================
-elif app_mode == "📋 Daftar Saham ISSI Lengkap":
-    st.markdown('<h1 class="rainbow-title">📋 Direktori Daftar Saham ISSI</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-rainbow">Daftar Lengkap Emiten yang Terdaftar dalam Indeks Saham Syariah Indonesia (ISSI) Berdasarkan Data Excel</p>', unsafe_allow_html=True)
+# ================= PAGE 2: DIREKTORI & TABEL PROFESIONAL SAHAM ISSI =================
+elif app_mode == "📋 Direktori & Tabel Saham ISSI":
+    st.markdown('<h1 class="rainbow-title">📋 Tabel Profesional Data Saham ISSI</h1>', unsafe_allow_html=True)
+    st.markdown(f'<p class="sub-rainbow">Menampilkan Total {len(issi_list)} Emiten Indeks Saham Syariah Indonesia Lengkap dengan Harga Open, High, Low, Close, & Volume Real-Time</p>', unsafe_allow_html=True)
 
     st.markdown("""
     <div class="card-container">
     """, unsafe_allow_html=True)
     
-    search_query = st.text_input("🔍 Cari Kode Emiten ISSI", "").upper()
-    
+    col_search, col_batch = st.columns([3, 1])
+    with col_search:
+        search_query = st.text_input("🔍 Cari Kode Emiten ISSI (Contoh: BBCA, ADRO, ASII)", "").upper()
+    with col_batch:
+        batch_size = st.selectbox("Jumlah Baris Ditampilkan", [25, 50, 100, len(issi_list)], index=0)
+
     filtered_stocks = [s for s in issi_list if search_query in s] if search_query else issi_list
     
-    st.write(f"Menampilkan **{len(filtered_stocks)}** emiten dari total **{len(issi_list)}** saham ISSI.")
+    st.write(f"Menampilkan hasil pencarian: **{len(filtered_stocks)}** dari total **{len(issi_list)}** emiten ISSI.")
+
+    # Ambil sampel atau data real-time untuk tabel profesional
+    @st.cache_data(ttl=120)
+    def fetch_market_data(tickers_subset):
+        data_rows = []
+        for idx, t in enumerate(tickers_subset, 1):
+            try:
+                tk = yf.Ticker(f"{t}.JK")
+                hist = tk.history(period="2d")
+                if not hist.empty:
+                    close_val = hist['Close'].iloc[-1]
+                    open_val = hist['Open'].iloc[-1]
+                    high_val = hist['High'].iloc[-1]
+                    low_val = hist['Low'].iloc[-1]
+                    vol_val = hist['Volume'].iloc[-1]
+                    prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else open_val
+                    change = close_val - prev_close
+                    pct_change = (change / prev_close) * 100 if prev_close > 0 else 0
+                else:
+                    close_val, open_val, high_val, low_val, vol_val, change, pct_change = 0, 0, 0, 0, 0, 0, 0
+            except Exception:
+                close_val, open_val, high_val, low_val, vol_val, change, pct_change = 0, 0, 0, 0, 0, 0, 0
+
+            data_rows.append({
+                "No": idx,
+                "Kode": t,
+                "Open": f"{open_val:,.2f}" if open_val > 0 else "-",
+                "High": f"{high_val:,.2f}" if high_val > 0 else "-",
+                "Low": f"{low_val:,.2f}" if low_val > 0 else "-",
+                "Close": f"{close_val:,.2f}" if close_val > 0 else "-",
+                "Perubahan (%)": f"{pct_change:+.2f}%" if close_val > 0 else "0.00%",
+                "Volume": f"{vol_val:,.0f}" if vol_val > 0 else "-"
+            })
+        return pd.DataFrame(data_rows)
+
+    # Batasi agar aplikasi tetap cepat saat meload tabel (mengambil sesuai batch yang dipilih user)
+    display_subset = filtered_stocks[:batch_size]
     
-    # Menampilkan dalam bentuk tabel rapi
-    df_display = pd.DataFrame({"No": range(1, len(filtered_stocks) + 1), "Kode Emiten ISSI": filtered_stocks})
-    st.dataframe(df_display, use_container_width=True, hide_index=True)
-    
+    with st.spinner("Mengambil data pasar saham ISSI real-time dari Yahoo Finance..."):
+        df_table = fetch_market_data(display_subset)
+
+    st.dataframe(df_table, use_container_width=True, hide_index=True)
     st.markdown("</div>", unsafe_allow_html=True)
