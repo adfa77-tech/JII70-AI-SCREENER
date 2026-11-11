@@ -105,18 +105,17 @@ def render_daily_trading_tips():
         ("⚖️ Tips Hari Ini: Atur Alokasi Modal (Money Management)", "Jangan menaruh seluruh modal pada satu saham saja (All-In). Diversifikasikan dana ke 3-4 emiten dari sektor syariah yang berbeda untuk meminimalkan risiko sistemik."),
         ("🧘 Tips Hari Ini: Kendalikan Emosi Trading", "Hindari aksi kejar harga (FOMO) saat suatu saham sudah naik tinggi beruntun. Lebih baik menunggu fase koreksi sehat (pullback) di area support terdekat."),
         ("📊 Tips Hari Ini: Manfaatkan Bandarmology & Akumulasi", "Perhatikan pergerakan harga di dekat penutupan sesi. Jika harga ditutup di dekat titik tertingginya (high) dengan volume besar, indikasi akumulasi institusi sangat kuat."),
-        ("🔍 Tips Hari Ini: Cek Kesehatan Fundamental", "Untuk investasi jangka menengah-panjang, selalu periksa rasio DER (Debt to Equity Ratio) danROE (Return on Equity) emiten pilihan Anda di JII70."),
+        ("🔍 Tips Hari Ini: Cek Kesehatan Fundamental", "Untuk investasi jangka menengah-panjang, selalu periksa rasio DER (Debt to Equity Ratio) dan ROE (Return on Equity) emiten pilihan Anda di JII70."),
         ("⏰ Tips Hari Ini: Waspada Sesi Pembukaan Pasar", "30 menit pertama pembukaan bursa sering kali penuh volatilitas tinggi. Tunggu hingga arah tren pasar (IHSG) mulai stabil sebelum mengeksekusi order.")
     ]
     
-    # Pilih tips berdasarkan hari dalam tahun (Day of Year) agar berubah otomatis setiap hari
     day_index = datetime.datetime.now().timetuple().tm_yday
     title, desc = tips_collection[day_index % len(tips_collection)]
     
     st.markdown(
         f"""
         <div class="tips-box">
-            <div style="font-size: 1.1rem; font-weight: 800; color: #00ff87; margin-bottom: 6px;">💡 {title}</div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: #00ff87; margin-bottom: 6px;">{title}</div>
             <div style="font-size: 0.95rem; color: #e2e8f0; line-height: 1.5;">{desc}</div>
         </div>
         """,
@@ -271,7 +270,6 @@ if app_mode == "🚀 Analisis & Berita AI":
     st.markdown('<h1 class="rainbow-title">🏙️ AI Smart Stock Analyzer & JII70 News Hub</h1>', unsafe_allow_html=True)
     st.markdown('<p class="sub-rainbow">Platform Analisis Saham JII70 Lengkap dengan Berita Terkini & Chart Teknikal Multi-Indikator</p>', unsafe_allow_html=True)
 
-    # Tampilkan Kotak Tips & Trik Trading Harian
     render_daily_trading_tips()
 
     with st.container():
@@ -346,7 +344,7 @@ if app_mode == "🚀 Analisis & Berita AI":
 
     with col_left:
         st.markdown(f"### 📰 Berita Terbaru & Link Berita Terpercaya: {stock_ticker}")
-        for i, news in enumerate(news_list):
+        for news in news_list:
             sentiment_color = "#00ff87" if news['sentiment'] == "Positif" else "#ffcc00"
             st.markdown(
                 f"""
@@ -360,7 +358,6 @@ if app_mode == "🚀 Analisis & Berita AI":
                 """,
                 unsafe_allow_html=True
             )
-            # Tombol link langsung ke sumber berita keuangan
             st.link_button(f"🔗 Baca Berita Lengkap {news['source']} ({stock_ticker})", news['url'], use_container_width=True)
 
     with col_right:
@@ -412,7 +409,7 @@ elif app_mode == "🔥 Saham Strong Buy":
 
         for idx, t in enumerate(tickers, 1):
             val = sum(ord(c) for c in t) % 3
-            if val == 0:  # Kriteria Strong Buy
+            if val == 0:
                 try:
                     df = fetch_single_stock_data(f"{t}.JK", period="30d")
                     if df is not None and not df.empty:
@@ -447,4 +444,147 @@ elif app_mode == "🔥 Saham Strong Buy":
                     pass
         return pd.DataFrame(strong_buy_list)
 
-    with st.spinner("AI sedang memindai emiten JII70 dengan filter volume > Rp 5
+    with st.spinner("AI sedang memindai emiten JII70 dengan filter volume > Rp 5 Miliar..."):
+        df_strong = fetch_strong_buy_stocks(jii_list)
+
+    if not df_strong.empty:
+        st.success(f"Ditemukan **{len(df_strong)} emiten** dengan status **Strong Buy** dan volume transaksi di atas Rp 5 Miliar.")
+        
+        df_table_display = df_strong[["No", "Kode", "Sinyal AI", "Previous Close", "Open", "High", "Low", "Close", "Perubahan (%)"]]
+        df_table_display["Nilai Transaksi"] = df_strong["Nilai Transaksi (Rp)"].apply(lambda x: f"Rp {x:,.0f}")
+
+        def color_pricing_rules(val):
+            if isinstance(val, (int, float)):
+                if val > 0:
+                    return 'color: #00ff87; font-weight: bold;'
+                elif val < 0:
+                    return 'color: #ff4d4d; font-weight: bold;'
+            return 'color: #ffffff;'
+
+        styled_df = df_table_display.style.format({
+            "Previous Close": "{:,.2f}",
+            "Open": "{:,.2f}",
+            "High": "{:,.2f}",
+            "Low": "{:,.2f}",
+            "Close": "{:,.2f}",
+            "Perubahan (%)": "{:+.2f}%"
+        }).map(color_pricing_rules, subset=["Previous Close", "Open", "High", "Low", "Close", "Perubahan (%)"])
+
+        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.markdown("### 🎯 Pilih Emiten untuk Membuka Grafik Candlestick")
+        strong_emiten_list = df_strong["Kode"].tolist()
+        selected_strong_stock = st.selectbox("Klik/Pilih Emiten:", strong_emiten_list, key="strong_buy_select")
+        if selected_strong_stock:
+            render_comprehensive_chart(selected_strong_stock)
+
+        st.markdown("---")
+        st.markdown("### 💡 Keterangan, Tautan Berita & Analisis AI (Strong Buy)")
+        for _, row in df_strong.iterrows():
+            st.markdown(
+                f"""
+                <div style="background: rgba(30, 41, 59, 0.7); padding: 15px; border-radius: 8px; border-left: 5px solid #00ff87; margin-bottom: 8px; color: #ffffff;">
+                    <div style="font-size: 1.1rem; font-weight: bold; color: #00ff87; margin-bottom: 4px;">🎯 Emiten: {row['Kode']} ({row['Sinyal AI']})</div>
+                    <div style="font-size: 0.85rem; color: #38bdf8; margin-bottom: 6px;">📰 Referensi Berita / Sumber: <b>{row['Sumber Berita']}</b></div>
+                    <div style="font-size: 0.95rem; color: #e2e8f0; line-height: 1.5;"><b>Alasan Analisis:</b> {row['Alasan AI']}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            st.link_button(f"🔗 Buka Portal Berita Terkini {row['Kode']} ({row['Sumber Berita']})", row['URL Berita'], use_container_width=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+    else:
+        st.warning("Belum ada emiten yang memenuhi kriteria Strong Buy dengan volume > Rp 5 Miliar pada sesi ini.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ================= PAGE 3: DIREKTORI & TABEL PROFESIONAL JII70 =================
+elif app_mode == "📋 Direktori & Tabel JII70":
+    st.markdown('<h1 class="rainbow-title">📋 Tabel Profesional Data Saham JII70</h1>', unsafe_allow_html=True)
+    st.markdown(f'<p class="sub-rainbow">Direktori Lengkap JII70 (Filter Volume > Rp 5 Miliar) & Akses Langsung ke Chart Candlestick</p>', unsafe_allow_html=True)
+
+    render_daily_trading_tips()
+
+    st.markdown("""<div class="card-container">""", unsafe_allow_html=True)
+    
+    col_search, col_batch = st.columns([3, 1])
+    with col_search:
+        search_query = st.text_input("🔍 Cari Kode Emiten JII70 (Contoh: ADRO, BRIS, UNVR)", "").upper()
+    with col_batch:
+        batch_size = st.selectbox("Jumlah Baris Ditampilkan", [25, 50, len(jii_list)], index=2)
+
+    filtered_stocks = [s for s in jii_list if search_query in s] if search_query else jii_list
+
+    @st.cache_data(ttl=120)
+    def fetch_market_data(tickers_subset):
+        data_rows = []
+        for idx, t in enumerate(tickers_subset, 1):
+            try:
+                df = fetch_single_stock_data(f"{t}.JK", period="30d")
+                if df is not None and not df.empty:
+                    close_val = df['Close'].iloc[-1]
+                    open_val = df['Open'].iloc[-1]
+                    high_val = df['High'].iloc[-1]
+                    low_val = df['Low'].iloc[-1]
+                    vol_val = df['Volume'].iloc[-1]
+                    prev_close = df['Close'].iloc[-2] if len(df) > 1 else open_val
+                    pct_change = ((close_val - prev_close) / prev_close) * 100 if prev_close > 0 else 0
+                    
+                    total_transaksi = vol_val * close_val
+                    if total_transaksi >= 5_000_000_000:
+                        data_rows.append({
+                            "No": len(data_rows) + 1,
+                            "Kode": t,
+                            "Previous Close": prev_close,
+                            "Open": open_val,
+                            "High": high_val,
+                            "Low": low_val,
+                            "Close": close_val,
+                            "Perubahan (%)": pct_change,
+                            "Nilai Transaksi (Rp)": total_transaksi
+                        })
+            except Exception:
+                pass
+        return pd.DataFrame(data_rows)
+
+    display_subset = filtered_stocks[:batch_size]
+    
+    with st.spinner("Mengambil data pasar saham JII70 real-time dengan filter volume > Rp 5 Miliar..."):
+        df_table = fetch_market_data(display_subset)
+
+    if not df_table.empty:
+        st.write(f"Menampilkan **{len(df_table)} emiten** aktif dengan volume transaksi di atas Rp 5 Miliar.")
+        
+        df_display = df_table[["No", "Kode", "Previous Close", "Open", "High", "Low", "Close", "Perubahan (%)"]].copy()
+        df_display["Nilai Transaksi"] = df_table["Nilai Transaksi (Rp)"].apply(lambda x: f"Rp {x:,.0f}")
+
+        def color_pricing_rules(val):
+            if isinstance(val, (int, float)):
+                if val > 0:
+                    return 'color: #00ff87; font-weight: bold;'
+                elif val < 0:
+                    return 'color: #ff4d4d; font-weight: bold;'
+            return 'color: #ffffff;'
+
+        styled_df = df_display.style.format({
+            "Previous Close": "{:,.2f}",
+            "Open": "{:,.2f}",
+            "High": "{:,.2f}",
+            "Low": "{:,.2f}",
+            "Close": "{:,.2f}",
+            "Perubahan (%)": "{:+.2f}%"
+        }).map(color_pricing_rules, subset=["Previous Close", "Open", "High", "Low", "Close", "Perubahan (%)"])
+
+        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        st.markdown("### 📊 Pilih Emiten untuk Membuka Chart Candlestick Lengkap")
+        table_emiten_list = df_table["Kode"].tolist()
+        selected_table_stock = st.selectbox("Klik/Pilih Nama Emiten:", table_emiten_list, key="table_select")
+        if selected_table_stock:
+            render_comprehensive_chart(selected_table_stock)
+    else:
+        st.warning("Tidak ada emiten yang memenuhi kriteria filter volume > Rp 5 Miliar pada pencarian ini.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
