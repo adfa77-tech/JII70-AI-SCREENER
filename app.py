@@ -211,10 +211,10 @@ if app_mode == "🚀 Analisis & Berita AI":
         </div>
         """, unsafe_allow_html=True)
 
-# ================= PAGE 2: DIREKTORI & TABEL PROFESIONAL JII70 (WARNA DINAMIS) =================
+# ================= PAGE 2: DIREKTORI & TABEL PROFESIONAL JII70 =================
 elif app_mode == "📋 Direktori & Tabel JII70":
     st.markdown('<h1 class="rainbow-title">📋 Tabel Profesional Data Saham JII70</h1>', unsafe_allow_html=True)
-    st.markdown(f'<p class="sub-rainbow">Menampilkan Total {len(jii_list)} Emiten Jakarta Islamic Index 70 Lengkap dengan Warna Indikator Harga Real-Time</p>', unsafe_allow_html=True)
+    st.markdown(f'<p class="sub-rainbow">Menampilkan Total {len(jii_list)} Emiten Jakarta Islamic Index 70 Lengkap dengan Kolom Previous Close & Warna Dinamis</p>', unsafe_allow_html=True)
 
     st.markdown("""
     <div class="card-container">
@@ -247,13 +247,14 @@ elif app_mode == "📋 Direktori & Tabel JII70":
                     change = close_val - prev_close
                     pct_change = (change / prev_close) * 100 if prev_close > 0 else 0
                 else:
-                    close_val, open_val, high_val, low_val, vol_val, change, pct_change = 0, 0, 0, 0, 0, 0, 0
+                    close_val, open_val, high_val, low_val, vol_val, prev_close, change, pct_change = 0, 0, 0, 0, 0, 0, 0, 0
             except Exception:
-                close_val, open_val, high_val, low_val, vol_val, change, pct_change = 0, 0, 0, 0, 0, 0, 0
+                close_val, open_val, high_val, low_val, vol_val, prev_close, change, pct_change = 0, 0, 0, 0, 0, 0, 0, 0
 
             data_rows.append({
                 "No": idx,
                 "Kode": t,
+                "Previous Close": prev_close,
                 "Open": open_val,
                 "High": high_val,
                 "Low": low_val,
@@ -268,7 +269,7 @@ elif app_mode == "📋 Direktori & Tabel JII70":
     with st.spinner("Mengambil data pasar saham JII70 real-time dari Yahoo Finance..."):
         df_table = fetch_market_data(display_subset)
 
-    # Fungsi styling warna sel pada pandas Styler (Hijau untuk >= 0, Merah untuk < 0)
+    # Fungsi styling warna sel (Hijau untuk > 0, Merah untuk < 0)
     def color_pricing_rules(val):
         if isinstance(val, (int, float)):
             if val > 0:
@@ -277,15 +278,16 @@ elif app_mode == "📋 Direktori & Tabel JII70":
                 return 'color: #ff4d4d; font-weight: bold;'
         return 'color: #ffffff;'
 
-    # Terapkan pemformatan angka dan warna dinamis pada tabel Pandas Styler
+    # Menggunakan .map() sesuai standar pandas versi terbaru
     styled_df = df_table.style.format({
+        "Previous Close": "{:,.2f}",
         "Open": "{:,.2f}",
         "High": "{:,.2f}",
         "Low": "{:,.2f}",
         "Close": "{:,.2f}",
         "Perubahan (%)": "{:+.2f}%",
         "Volume": "{:,.0f}"
-    }).applymap(color_pricing_rules, subset=["Open", "High", "Low", "Close", "Perubahan (%)"])
+    }).map(color_pricing_rules, subset=["Previous Close", "Open", "High", "Low", "Close", "Perubahan (%)"])
 
     st.dataframe(styled_df, use_container_width=True, hide_index=True)
     st.markdown("</div>", unsafe_allow_html=True)
