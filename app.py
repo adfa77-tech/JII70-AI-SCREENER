@@ -5,7 +5,7 @@ import yfinance as yf
 
 # Konfigurasi Halaman (Layout Lebar)
 st.set_page_config(
-    page_title="AI Stock Analyzer Pro - ISSI & IHSG",
+    page_title="AI Stock Analyzer Pro - JII70 & IHSG",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -70,26 +70,20 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Fungsi untuk memuat SELURUH daftar saham ISSI dari file Excel (SAHAM ISSI.xlsx)
+# Daftar Resmi 70 Emiten JII70
 @st.cache_data
-def load_issi_stocks_excel():
-    stocks = []
-    try:
-        df = pd.read_excel('SAHAM ISSI.xlsx', sheet_name='SAHAM ISSI', skiprows=1, header=0)
-        # Mengambil kolom 'Kode' dan membersihkannya
-        if 'Kode' in df.columns:
-            stocks = df['Kode'].dropna().astype(str).str.strip().tolist()
-        else:
-            stocks = df.iloc[:, 1].dropna().astype(str).str.strip().tolist()
-    except Exception as e:
-        # Fallback jika terjadi kendala file
-        stocks = ['AADI', 'AALI', 'ABMM', 'ACES', 'ADCP', 'ADES', 'ADMG', 'ADMR', 'ADRO', 'AGAR', 'AGII', 'AISA', 'AKPI', 'AKRA', 'ALDO', 'ANTM', 'ASII', 'BBCA', 'BBRI', 'BMRI', 'TLKM']
-    
-    # Filter dan pastikan unik serta urut
-    cleaned = sorted(list(set([s for s in stocks if s and s.lower() != 'nan' and s != 'Kode'])))
-    return cleaned
+def load_jii70_stocks():
+    return [
+        'AADI', 'ACES', 'ADMR', 'ADRO', 'AKRA', 'ANTM', 'ARCI', 'AVIA', 'BKSL', 'BRIS', 
+        'BRMS', 'BSDE', 'BTPS', 'BUMI', 'CMRY', 'CPIN', 'CTRA', 'DEWA', 'DKFT', 'DSNG', 
+        'ELSA', 'ENRG', 'ERAA', 'ESSA', 'EXCL', 'HEAL', 'HRTA', 'HRUM', 'ICBP', 'IMPC', 
+        'INDF', 'INDY', 'INKP', 'INTP', 'ISAT', 'ITMG', 'JPFA', 'JSMR', 'KIJA', 'KLBF', 
+        'KPIG', 'LSIP', 'MAPA', 'MAPI', 'MARK', 'MBMA', 'MDKA', 'MEDC', 'MIKA', 'MTEL', 
+        'MYOR', 'PGAS', 'PTBA', 'RAJA', 'RATU', 'SIDO', 'SMGR', 'SMRA', 'SRTG', 'SSIA', 
+        'TAPG', 'TCPI', 'TINS', 'TKIM', 'TLKM', 'TOBA', 'TPIA', 'UNTR', 'UNVR', 'WIFI'
+    ]
 
-issi_list = load_issi_stocks_excel()
+jii_list = load_jii70_stocks()
 
 # Fungsi untuk mengambil data IHSG Real-Time dari Yahoo Finance (^JKSE)
 @st.cache_data(ttl=60)
@@ -112,7 +106,7 @@ ihsg_price, ihsg_change, ihsg_pct = get_ihsg_realtime()
 # --- SIDEBAR NAVIGASI & WIDGET IHSG REALTIME ---
 with st.sidebar:
     st.markdown("### 🌐 Navigasi Menu")
-    app_mode = st.radio("Pilih Halaman", ["🚀 Analisis & Berita AI", "📋 Direktori & Tabel Saham ISSI"])
+    app_mode = st.radio("Pilih Halaman", ["🚀 Analisis & Berita AI", "📋 Direktori & Tabel JII70"])
     
     st.markdown("---")
     st.markdown("### 📊 IHSG Real-Time (Yahoo Finance)")
@@ -132,15 +126,15 @@ with st.sidebar:
 
 # ================= PAGE 1: ANALISIS & BERITA AI =================
 if app_mode == "🚀 Analisis & Berita AI":
-    st.markdown('<h1 class="rainbow-title">🏙️ AI Smart Stock Analyzer & ISSI News Hub</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-rainbow">Platform Analisis Saham Syariah (ISSI) Canggih dengan Rekomendasi Real-time & Berita Terkini</p>', unsafe_allow_html=True)
+    st.markdown('<h1 class="rainbow-title">🏙️ AI Smart Stock Analyzer & JII70 News Hub</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-rainbow">Platform Analisis Saham Unggulan Jakarta Islamic Index (JII70) dengan Rekomendasi Real-time & Berita Terkini</p>', unsafe_allow_html=True)
 
     with st.container():
         col1, col2, col3 = st.columns([2, 2, 1])
         with col1:
             selected_stock = st.selectbox(
-                f"🔍 Pilih Emiten Saham ISSI (Total: {len(issi_list)} Emiten)",
-                [f"{s}" for s in issi_list]
+                f"🔍 Pilih Emiten Saham JII70 (Total: {len(jii_list)} Emiten)",
+                [f"{s}" for s in jii_list]
             )
         with col2:
             trading_style = st.selectbox(
@@ -151,13 +145,13 @@ if app_mode == "🚀 Analisis & Berita AI":
             st.write("&nbsp;")
             analyze_btn = st.button("🚀 Jalankan AI Analisis", type="primary", use_container_width=True)
 
-    stock_ticker = selected_stock.split(" ")[0]
+    stock_ticker = selected_stock
 
     def get_dynamic_news(ticker):
         return [
             {"title": f"{ticker} Catat Kinerja Fundamental Solid dan Pertumbuhan Volume Penjualan Berkelanjutan", "time": "1 jam lalu", "sentiment": "Positif"},
             {"title": f"Analisis Teknikal Menunjukkan Akumulasi Volume Kuat pada Saham {ticker}", "time": "4 jam lalu", "sentiment": "Positif"},
-            {"title": f"Dinamika Pasar & Sentimen Sektor Syariah Menguji Level Resistance {ticker}", "time": "6 jam lalu", "sentiment": "Netral"}
+            {"title": f"Dinamika Pasar & Sentimen Sektor Syariah Unggulan Menguji Level Resistance {ticker}", "time": "6 jam lalu", "sentiment": "Netral"}
         ]
 
     def get_ai_recommendation(ticker, style):
@@ -217,10 +211,10 @@ if app_mode == "🚀 Analisis & Berita AI":
         </div>
         """, unsafe_allow_html=True)
 
-# ================= PAGE 2: DIREKTORI & TABEL PROFESIONAL SAHAM ISSI =================
-elif app_mode == "📋 Direktori & Tabel Saham ISSI":
-    st.markdown('<h1 class="rainbow-title">📋 Tabel Profesional Data Saham ISSI</h1>', unsafe_allow_html=True)
-    st.markdown(f'<p class="sub-rainbow">Menampilkan Total {len(issi_list)} Emiten Indeks Saham Syariah Indonesia Lengkap dengan Harga Open, High, Low, Close, & Volume Real-Time</p>', unsafe_allow_html=True)
+# ================= PAGE 2: DIREKTORI & TABEL PROFESIONAL JII70 =================
+elif app_mode == "📋 Direktori & Tabel JII70":
+    st.markdown('<h1 class="rainbow-title">📋 Tabel Profesional Data Saham JII70</h1>', unsafe_allow_html=True)
+    st.markdown(f'<p class="sub-rainbow">Menampilkan Total {len(jii_list)} Emiten Jakarta Islamic Index 70 Lengkap dengan Harga Open, High, Low, Close, & Volume Real-Time</p>', unsafe_allow_html=True)
 
     st.markdown("""
     <div class="card-container">
@@ -228,15 +222,14 @@ elif app_mode == "📋 Direktori & Tabel Saham ISSI":
     
     col_search, col_batch = st.columns([3, 1])
     with col_search:
-        search_query = st.text_input("🔍 Cari Kode Emiten ISSI (Contoh: BBCA, ADRO, ASII)", "").upper()
+        search_query = st.text_input("🔍 Cari Kode Emiten JII70 (Contoh: ADRO, BRIS, UNVR)", "").upper()
     with col_batch:
-        batch_size = st.selectbox("Jumlah Baris Ditampilkan", [25, 50, 100, len(issi_list)], index=0)
+        batch_size = st.selectbox("Jumlah Baris Ditampilkan", [25, 50, len(jii_list)], index=2)
 
-    filtered_stocks = [s for s in issi_list if search_query in s] if search_query else issi_list
+    filtered_stocks = [s for s in jii_list if search_query in s] if search_query else jii_list
     
-    st.write(f"Menampilkan hasil pencarian: **{len(filtered_stocks)}** dari total **{len(issi_list)}** emiten ISSI.")
+    st.write(f"Menampilkan hasil pencarian: **{len(filtered_stocks)}** dari total **{len(jii_list)}** emiten JII70.")
 
-    # Ambil sampel atau data real-time untuk tabel profesional
     @st.cache_data(ttl=120)
     def fetch_market_data(tickers_subset):
         data_rows = []
@@ -270,10 +263,9 @@ elif app_mode == "📋 Direktori & Tabel Saham ISSI":
             })
         return pd.DataFrame(data_rows)
 
-    # Batasi agar aplikasi tetap cepat saat meload tabel (mengambil sesuai batch yang dipilih user)
     display_subset = filtered_stocks[:batch_size]
     
-    with st.spinner("Mengambil data pasar saham ISSI real-time dari Yahoo Finance..."):
+    with st.spinner("Mengambil data pasar saham JII70 real-time dari Yahoo Finance..."):
         df_table = fetch_market_data(display_subset)
 
     st.dataframe(df_table, use_container_width=True, hide_index=True)
